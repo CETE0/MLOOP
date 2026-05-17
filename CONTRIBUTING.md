@@ -6,7 +6,7 @@ Thank you for your interest in contributing to MLOOP! This document provides gui
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/mloop.git
+   git clone https://github.com/CETE0/MLOOP.git
    cd mloop
    ```
 

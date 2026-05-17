@@ -27,7 +27,7 @@ MLOOP is an open-source Raspberry Pi video looper for galleries, museums, exhibi
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/mloop.git
+git clone https://github.com/CETE0/MLOOP.git
 cd mloop
 
 # Install in editable mode
