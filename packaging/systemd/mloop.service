@@ -1,0 +1,18 @@
+[Unit]
+Description=MLOOP video looper
+After=multi-user.target sound.target
+Wants=sound.target
+
+[Service]
+Type=simple
+User=mloop
+Group=mloop
+RuntimeDirectory=mloop
+StateDirectory=mloop
+LogsDirectory=mloop
+ExecStart=/usr/bin/mloopd
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

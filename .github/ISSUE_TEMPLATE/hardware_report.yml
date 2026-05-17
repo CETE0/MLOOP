@@ -1,0 +1,84 @@
+name: Hardware Compatibility Report
+description: Report hardware compatibility test results
+title: "[Hardware]: "
+labels: ["hardware"]
+body:
+  - type: input
+    id: pi_model
+    attributes:
+      label: Raspberry Pi Model
+      description: Which Raspberry Pi model are you testing?
+      placeholder: "Pi 4 Model B"
+    validations:
+      required: true
+  - type: input
+    id: os_version
+    attributes:
+      label: OS Version
+      description: Output of `cat /etc/os-release`
+      placeholder: "Raspberry Pi OS Lite Bookworm"
+    validations:
+      required: true
+  - type: input
+    id: display_model
+    attributes:
+      label: Display Model
+      description: Make and model of the display
+      placeholder: "Samsung UE55TU7020"
+    validations:
+      required: true
+  - type: input
+    id: hdmi_port
+    attributes:
+      label: HDMI Port Used
+      description: Which HDMI port on the Pi?
+      placeholder: "HDMI-A-1"
+    validations:
+      required: true
+  - type: input
+    id: cable_adapter
+    attributes:
+      label: Cable/Adapter/Splitter
+      description: Describe any adapters or splitters used
+      placeholder: "Direct HDMI cable, 2m"
+  - type: input
+    id: audio_output
+    attributes:
+      label: Audio Output
+      description: How is audio output configured?
+      placeholder: "HDMI audio"
+  - type: dropdown
+    id: forced_hdmi
+    attributes:
+      label: Forced HDMI Mode
+      description: Is forced HDMI mode enabled?
+      options:
+        - "No"
+        - "Yes"
+    validations:
+      required: true
+  - type: textarea
+    id: kmsprint
+    attributes:
+      label: kmsprint Output
+      description: Output of `kmsprint | grep Connector`
+      render: shell
+  - type: textarea
+    id: drm_status
+    attributes:
+      label: DRM Status
+      description: Output of `cat /sys/class/drm/card*-HDMI-A-*/status`
+      render: shell
+  - type: textarea
+    id: logs
+    attributes:
+      label: Debug Info
+      description: Output of `scripts/collect-debug-info.sh`
+      render: shell
+  - type: textarea
+    id: results
+    attributes:
+      label: Test Results
+      description: Describe your test results including playback quality, HDMI gesture behavior, audio, etc.
+    validations:
+      required: true

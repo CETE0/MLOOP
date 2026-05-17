@@ -1,0 +1,38 @@
+[playback]
+media_dirs = ["/home/mloop/media", "/media/mloop"]
+shuffle = false
+loop = true
+volume = 80
+image_duration_seconds = 10
+
+[player]
+backend = "mpv"
+mpv_path = "/usr/bin/mpv"
+ipc_socket = "/run/mloop/mpv.sock"
+
+[display]
+connector = "auto"
+rotation = 0
+mode = "auto"
+
+[audio]
+output = "auto"
+
+[hdmi_gestures]
+enabled = true
+enter_min_disconnect_ms = 800
+enter_max_disconnect_ms = 8000
+cycle_min_disconnect_ms = 300
+cycle_max_disconnect_ms = 5000
+debounce_ms = 500
+select_after_connected_ms = 5000
+menu_timeout_ms = 30000
+
+[menu]
+osd_duration_ms = 5000
+confirm_dangerous_actions = true
+
+[web]
+enabled = false
+host = "127.0.0.1"
+port = 8080

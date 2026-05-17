@@ -1,0 +1,14 @@
+line-length = 100
+target-version = "py311"
+
+[lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "A", "C4", "SIM"]
+ignore = []
+
+[lint.isort]
+known-first-party = ["mloop"]
+
+[format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
