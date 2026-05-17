@@ -1,19 +1,21 @@
 """MLOOP daemon entry point."""
 
+import asyncio
+
 from mloop.daemon import Daemon
 
 
-def main() -> None:
+async def main() -> None:
     """Run the MLOOP daemon."""
     daemon = Daemon()
     try:
-        daemon.run()
+        await daemon.run()
     except KeyboardInterrupt:
-        daemon.stop()
+        await daemon.stop()
     except Exception:
-        daemon.stop()
+        await daemon.stop()
         raise
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

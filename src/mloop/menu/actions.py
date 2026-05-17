@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import socket
 import subprocess
@@ -31,9 +32,8 @@ def create_volume_action(player: Any, current_volume: list[int]) -> Any:
         current_volume[0] = (current_volume[0] + 10) % 110
         if current_volume[0] == 0:
             current_volume[0] = 10
-        import asyncio
 
-        asyncio.get_event_loop().run_until_complete(player.set_volume(current_volume[0]))
+        asyncio.create_task(player.set_volume(current_volume[0]))
         logger.info("Volume changed to %d", current_volume[0])
 
     return action
@@ -51,9 +51,8 @@ def create_audio_output_action(player: Any, outputs: list[str], current: list[in
     def action() -> None:
         current[0] = (current[0] + 1) % len(outputs)
         output = outputs[current[0]]
-        import asyncio
 
-        asyncio.get_event_loop().run_until_complete(player.set_audio_output(output))
+        asyncio.create_task(player.set_audio_output(output))
         logger.info("Audio output changed to %s", output)
 
     return action
@@ -71,9 +70,8 @@ def create_rotation_action(player: Any, current_rotation: list[int]) -> Any:
         rotations = [0, 90, 180, 270]
         idx = rotations.index(current_rotation[0])
         current_rotation[0] = rotations[(idx + 1) % len(rotations)]
-        import asyncio
 
-        asyncio.get_event_loop().run_until_complete(player.set_rotation(current_rotation[0]))
+        asyncio.create_task(player.set_rotation(current_rotation[0]))
         logger.info("Rotation changed to %d", current_rotation[0])
 
     return action
@@ -83,12 +81,15 @@ def create_rescan_action(media_scanner: Any) -> Any:
     """Create an action to rescan media.
 
     Args:
-        media_scanner: Media scanner callable.
+        media_scanner: Media scanner callable (sync or async).
     """
 
     def action() -> None:
         logger.info("Rescanning media")
-        media_scanner()
+        if asyncio.iscoroutinefunction(media_scanner):
+            asyncio.create_task(media_scanner())
+        else:
+            media_scanner()
 
     return action
 

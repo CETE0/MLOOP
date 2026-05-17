@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import time
 
@@ -48,11 +49,12 @@ class Daemon:
         self.menu_model = MenuModel()
         self.menu_controller = MenuController(self.menu_model, self.config.menu)
         self._hdmi_watcher: HdmiWatcher | None = None
+        self._watcher_task: asyncio.Task[None] | None = None
         self._current_volume = [self.config.playback.volume]
         self._current_rotation = [self.config.display.rotation]
         self._current_audio_idx = [0]
 
-    def run(self) -> None:
+    async def run(self) -> None:
         """Run the daemon."""
         self.logger.info("MLOOP starting")
 
@@ -72,17 +74,18 @@ class Daemon:
                 debounce_ms=self.config.hdmi_gestures.debounce_ms,
             )
             self._hdmi_watcher.on_event(self._on_hdmi_event)
+            self._watcher_task = asyncio.create_task(self._hdmi_watcher.start())
 
         self.player.start()
 
         try:
-            self._run_main_loop()
+            await self._run_main_loop()
         finally:
-            self.stop()
+            await self.stop()
 
-    def _run_main_loop(self) -> None:
+    async def _run_main_loop(self) -> None:
         """Run the main event loop."""
-        self._load_media()
+        await self._load_media()
 
         while self.service.is_running:
             now_ms = int(time.monotonic() * 1000)
@@ -92,15 +95,23 @@ class Daemon:
                 self.logger.warning("mpv exited unexpectedly, restarting")
                 self.player.start()
 
-            time.sleep(0.1)
+            await asyncio.sleep(0.1)
 
-    def stop(self) -> None:
+    async def stop(self) -> None:
         """Stop the daemon."""
         self.logger.info("MLOOP stopping")
         self.service.stop()
 
         if self._hdmi_watcher:
-            asyncio.get_event_loop().run_until_complete(self._hdmi_watcher.stop())
+            await self._hdmi_watcher.stop()
+
+        if self._watcher_task and not self._watcher_task.done():
+            try:
+                await asyncio.wait_for(self._watcher_task, timeout=1.0)
+            except TimeoutError:
+                self._watcher_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await self._watcher_task
 
         self.player.stop()
 
@@ -147,16 +158,14 @@ class Daemon:
         self.menu_controller = MenuController(self.menu_model, self.config.menu)
         self.gesture_machine.on_intent(self.menu_controller.handle_intent)
 
-    def _load_media(self) -> None:
+    async def _load_media(self) -> None:
         """Scan and load media files."""
         self.logger.info("Scanning media directories: %s", self.config.playback.media_dirs)
         files = scan_media_dirs(self.config.playback.media_dirs)
 
         if not files:
             self.logger.warning("No media files found")
-            asyncio.get_event_loop().run_until_complete(
-                self.player.show_osd("No media files found", 10000)
-            )
+            await self.player.show_osd("No media files found", 10000)
             return
 
         playlist = build_playlist(
@@ -166,7 +175,7 @@ class Daemon:
         )
 
         self.logger.info("Loaded %d files into playlist", len(playlist))
-        asyncio.get_event_loop().run_until_complete(self.player.load_playlist(playlist))
+        await self.player.load_playlist(playlist)
 
     def _on_hdmi_event(self, event: HdmiEvent) -> None:
         """Handle HDMI event.
@@ -177,6 +186,8 @@ class Daemon:
         self.gesture_machine.handle_event(event)
 
         if self.menu_model.is_open:
-            asyncio.get_event_loop().run_until_complete(
-                self.player.show_osd(self.menu_model.render(), self.config.menu.osd_duration_ms)
+            asyncio.create_task(
+                self.player.show_osd(
+                    self.menu_model.render(), self.config.menu.osd_duration_ms
+                )
             )
