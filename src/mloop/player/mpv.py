@@ -120,10 +120,7 @@ class MpvPlayer:
             degrees: Rotation in degrees (0, 90, 180, 270).
         """
         ipc = await self.connect_ipc()
-        if degrees == 0:
-            await ipc.set_vf("")
-        else:
-            await ipc.set_vf(f"rotate={degrees}")
+        await ipc.set_property("video-rotate", degrees)
         logger.info("Rotation set to %d degrees", degrees)
 
     async def set_audio_output(self, output: str) -> None:
