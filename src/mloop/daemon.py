@@ -25,7 +25,7 @@ from mloop.menu.actions import (
 )
 from mloop.menu.controller import MenuController
 from mloop.menu.model import MenuItem, MenuModel
-from mloop.player.mpv import MpvPlayer
+from mloop.player import create_player
 from mloop.system.platform import get_platform_info
 from mloop.system.service import ServiceManager
 
@@ -44,7 +44,7 @@ class Daemon:
         self.config = config or load_config()
         self.logger = setup_logging()
         self.service = ServiceManager()
-        self.player = MpvPlayer(self.config.player)
+        self.player = create_player(self.config.player)
         self.gesture_machine = GestureStateMachine(self.config.hdmi_gestures)
         self.menu_model = MenuModel()
         self.menu_controller = MenuController(self.menu_model, self.config.menu)

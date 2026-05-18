@@ -8,6 +8,7 @@ image_duration_seconds = 10
 [player]
 backend = "mpv"
 mpv_path = "/usr/bin/mpv"
+cvlc_path = "/usr/bin/cvlc"
 ipc_socket = "/run/mloop/mpv.sock"
 
 [display]

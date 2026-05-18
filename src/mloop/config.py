@@ -46,6 +46,7 @@ class PlayerConfig:
 
     backend: str = "mpv"
     mpv_path: str = "/usr/bin/mpv"
+    cvlc_path: str = "/usr/bin/cvlc"
     ipc_socket: str = str(DEFAULT_IPC_SOCKET)
 
 

@@ -46,7 +46,20 @@ def test_default_player_values() -> None:
 
     assert config.player.backend == "mpv"
     assert config.player.mpv_path == "/usr/bin/mpv"
+    assert config.player.cvlc_path == "/usr/bin/cvlc"
     assert "/mpv.sock" in config.player.ipc_socket
+
+
+def test_player_config_backend_mpv() -> None:
+    """Test PlayerConfig with mpv backend."""
+    cfg = PlayerConfig(backend="mpv")
+    assert cfg.backend == "mpv"
+
+
+def test_player_config_backend_cvlc() -> None:
+    """Test PlayerConfig with cvlc backend."""
+    cfg = PlayerConfig(backend="cvlc")
+    assert cfg.backend == "cvlc"
 
 
 def test_default_display_values() -> None:
