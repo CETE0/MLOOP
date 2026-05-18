@@ -2,7 +2,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in MLOOP, please report it privately through GitHub Security Advisories or by contacting the maintainers directly.
+If you discover a security vulnerability in MLOOP, please report it privately through [GitHub Security Advisories](https://github.com/CETE0/MLOOP/security/advisories/new) or by contacting the maintainers directly.
 
 **Please do not report security vulnerabilities through public GitHub issues.**
 
