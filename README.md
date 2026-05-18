@@ -86,4 +86,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 
 ## License
 
-GPL-3.0-or-later. See [LICENSE](LICENSE) for details.
+MLOOP is licensed under **GPL-3.0-or-later**. This copyleft license was chosen to ensure that modifications and improvements to this museum/gallery infrastructure software remain open and available to the community. See [LICENSE](LICENSE) for the full terms.
