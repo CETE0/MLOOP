@@ -110,6 +110,4 @@ async def test_ipc_set_rotation_does_not_use_vf(degrees: int) -> None:
     await client.set_property("video-rotate", degrees)
 
     vf_commands = [c for c in commands if c[:2] == ["set_property", "vf"]]
-    assert not vf_commands, (
-        f"Should not use vf property for rotation, got: {vf_commands}"
-    )
+    assert not vf_commands, f"Should not use vf property for rotation, got: {vf_commands}"

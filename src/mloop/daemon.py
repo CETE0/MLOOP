@@ -187,7 +187,5 @@ class Daemon:
 
         if self.menu_model.is_open:
             asyncio.create_task(
-                self.player.show_osd(
-                    self.menu_model.render(), self.config.menu.osd_duration_ms
-                )
+                self.player.show_osd(self.menu_model.render(), self.config.menu.osd_duration_ms)
             )

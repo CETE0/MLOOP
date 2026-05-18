@@ -121,9 +121,7 @@ async def test_daemon_hdmi_events_reach_gesture_machine(tmp_path, monkeypatch):
     (connector_path / "status").write_text("connected")
     await asyncio.sleep(0.5)
 
-    assert daemon.menu_model.is_open, (
-        "Menu did not open after valid disconnect/connect sequence"
-    )
+    assert daemon.menu_model.is_open, "Menu did not open after valid disconnect/connect sequence"
 
     daemon.service.stop()
     await asyncio.wait_for(daemon_task, timeout=2.0)
