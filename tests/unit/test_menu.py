@@ -1,9 +1,12 @@
 """Tests for menu model and controller."""
 
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from mloop.config import MenuConfig
 from mloop.gestures.events import GestureIntent
+from mloop.menu.actions import create_network_info_action
 from mloop.menu.controller import MenuController
 from mloop.menu.model import MenuItem, MenuModel
 
@@ -125,3 +128,20 @@ def test_dangerous_item_requires_confirmation() -> None:
 
     controller.handle_intent(GestureIntent.SELECT_ITEM)
     assert len(executed) == 1
+
+
+def test_network_info_action_shows_osd() -> None:
+    """Test that network info action renders info through player OSD."""
+    player = MagicMock()
+    osd_duration = 7000
+    action = create_network_info_action(player, osd_duration)
+
+    with patch("mloop.menu.actions.asyncio.create_task") as mock_create_task:
+        action()
+
+    mock_create_task.assert_called_once()
+
+    player.show_osd.assert_called_once()
+    call_args = player.show_osd.call_args
+    assert "=== Network Info ===" in call_args[0][0]
+    assert call_args[0][1] == osd_duration
