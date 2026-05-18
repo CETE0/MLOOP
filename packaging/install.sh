@@ -39,6 +39,7 @@ mkdir -p /etc/mloop
 mkdir -p /var/lib/mloop
 mkdir -p /run/mloop
 mkdir -p /home/mloop/media
+mkdir -p /opt/mloop/src
 
 chown mloop:mloop /var/lib/mloop
 chown mloop:mloop /home/mloop/media
@@ -46,12 +47,16 @@ chown mloop:mloop /home/mloop/media
 echo ""
 echo "Installing MLOOP..."
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR/.."
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+cp "$PROJECT_ROOT/pyproject.toml" /opt/mloop/src/
+cp -r "$PROJECT_ROOT/src" /opt/mloop/src/
 
 python3 -m venv /opt/mloop/venv
-/opt/mloop/venv/bin/pip install -e .
+/opt/mloop/venv/bin/pip install /opt/mloop/src
 
 ln -sf /opt/mloop/venv/bin/mloopd /usr/bin/mloopd
+chown -R mloop:mloop /opt/mloop
 
 echo ""
 echo "Installing configuration..."

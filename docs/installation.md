@@ -15,61 +15,35 @@ This guide walks you through installing MLOOP on a Raspberry Pi.
 2. Flash the image to your SD card using Raspberry Pi Imager
 3. Boot the Pi and complete initial setup
 
-## Step 2: Install Dependencies
+## Step 2: Install MLOOP
+
+Clone the repository and run the install script:
 
 ```bash
-sudo apt update
-sudo apt install -y mpv python3 python3-pip python3-venv
-```
-
-## Step 3: Install MLOOP
-
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/mloop.git
+git clone https://github.com/CETE0/mloop.git
 cd mloop
-
-# Create virtual environment
-python3 -m venv .venv
-source .venv/bin/activate
-
-# Install MLOOP
-pip install -e .
+sudo packaging/install.sh
 ```
 
-## Step 4: Configure MLOOP
+The install script handles everything automatically:
+- Installs system dependencies (mpv, python3, pip, venv)
+- Creates the `mloop` system user
+- Creates required directories (`/etc/mloop`, `/var/lib/mloop`, `/run/mloop`, `/home/mloop/media`, `/opt/mloop`)
+- Copies the MLOOP source to `/opt/mloop/src` and installs it in a virtual environment at `/opt/mloop/venv`
+- Installs the default configuration
+- Enables and starts the systemd service
 
-Copy the example configuration:
+> **Note:** The checkout directory can be removed after installation. MLOOP runs entirely from `/opt/mloop`.
 
-```bash
-sudo mkdir -p /etc/mloop
-sudo cp config/mloop.example.toml /etc/mloop/config.toml
-```
+## Step 3: Configure MLOOP (optional)
 
-Edit the configuration file to set your media directory:
+The default configuration is installed at `/etc/mloop/config.toml`. Edit it if needed:
 
 ```bash
 sudo nano /etc/mloop/config.toml
 ```
 
-## Step 5: Create MLOOP User
-
-```bash
-sudo useradd --system --create-home mloop
-sudo mkdir -p /home/mloop/media
-sudo chown mloop:mloop /home/mloop/media
-```
-
-## Step 6: Enable the Service
-
-```bash
-sudo cp packaging/systemd/mloop.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable mloop
-sudo systemctl start mloop
-```
-
-## Step 7: Add Media
+## Step 4: Add Media
 
 Copy your media files to the media directory:
 
@@ -90,6 +64,16 @@ View logs:
 
 ```bash
 sudo journalctl -u mloop -f
+```
+
+## Updating MLOOP
+
+To update, pull the latest source and re-run the install script:
+
+```bash
+cd /path/to/mloop-checkout
+git pull
+sudo packaging/install.sh
 ```
 
 ## Troubleshooting
