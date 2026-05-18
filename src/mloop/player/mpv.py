@@ -123,11 +123,41 @@ class MpvPlayer:
         await ipc.set_property("video-rotate", degrees)
         logger.info("Rotation set to %d degrees", degrees)
 
+    async def get_audio_devices(self) -> list[dict[str, str]]:
+        """Get available audio devices from mpv.
+
+        Queries the ``audio-device-list`` property to obtain device names
+        and descriptions that are valid on the current system.
+
+        Returns:
+            List of dicts with ``name`` and ``description`` keys.
+            Returns an empty list if the query fails.
+        """
+        ipc = await self.connect_ipc()
+        try:
+            response = await ipc.get_property("audio-device-list")
+        except Exception:
+            logger.warning("Failed to query audio-device-list from mpv")
+            return []
+
+        if response and isinstance(response, list):
+            return [
+                {
+                    "name": d.get("name", ""),
+                    "description": d.get("description", ""),
+                }
+                for d in response
+                if isinstance(d, dict)
+            ]
+        return []
+
     async def set_audio_output(self, output: str) -> None:
         """Set audio output device.
 
         Args:
-            output: Audio output device name.
+            output: Audio output device name as returned by
+                    ``audio-device-list`` (e.g. ``auto`` or a full
+                    ALSA device identifier).
         """
         ipc = await self.connect_ipc()
         await ipc.set_property("audio-device", output)

@@ -7,6 +7,7 @@ import contextlib
 import logging
 import time
 
+from mloop.audio.devices import resolve_audio_outputs
 from mloop.config import Config, load_config
 from mloop.display.drm import discover_connectors
 from mloop.display.hdmi_watcher import HdmiEvent, HdmiWatcher
@@ -65,7 +66,6 @@ class Daemon:
         self.service.start()
 
         self._setup_gesture_handlers()
-        self._build_menu()
 
         connectors = discover_connectors(self.config.display.connector)
         if connectors:
@@ -77,6 +77,7 @@ class Daemon:
             self._watcher_task = asyncio.create_task(self._hdmi_watcher.start())
 
         self.player.start()
+        await self._build_menu()
 
         try:
             await self._run_main_loop()
@@ -119,8 +120,24 @@ class Daemon:
         """Setup gesture and menu handlers."""
         self.gesture_machine.on_intent(self.menu_controller.handle_intent)
 
-    def _build_menu(self) -> None:
-        """Build the menu items."""
+    async def _build_menu(self) -> None:
+        """Build the menu items, discovering audio devices from mpv."""
+        outputs: list[tuple[str, str]] = [("Auto", "auto")]
+
+        try:
+            audio_devices = await self.player.get_audio_devices()
+            resolved = resolve_audio_outputs(audio_devices)
+            if resolved:
+                outputs = resolved
+            self.logger.info(
+                "Audio outputs resolved: %s",
+                [(label, did) for label, did in outputs],
+            )
+        except Exception as exc:
+            self.logger.warning(
+                "Could not query audio devices from mpv, using defaults: %s", exc
+            )
+
         items = [
             MenuItem(label="Resume playback", action=create_resume_action()),
             MenuItem(
@@ -130,7 +147,7 @@ class Daemon:
             MenuItem(
                 label="Audio output",
                 action=create_audio_output_action(
-                    self.player, ["auto", "hdmi"], self._current_audio_idx
+                    self.player, outputs, self._current_audio_idx
                 ),
             ),
             MenuItem(
