@@ -10,12 +10,13 @@ import subprocess
 from pathlib import Path
 
 from mloop.config import PlayerConfig
+from mloop.player.backend import PlayerBackend
 from mloop.player.ipc import MpvIpcClient
 
 logger = logging.getLogger("mloop.player.mpv")
 
 
-class MpvPlayer:
+class MpvPlayer(PlayerBackend):
     """mpv playback controller."""
 
     def __init__(self, config: PlayerConfig) -> None:
