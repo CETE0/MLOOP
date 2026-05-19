@@ -19,6 +19,8 @@ def test_discover_connectors_connected() -> None:
 
     assert len(connectors) == 1
     assert connectors[0].name == "card1-HDMI-A-1"
+    assert connectors[0].status == "connected"
+    assert connectors[0].is_connected is True
 
 
 def test_discover_connectors_disconnected() -> None:
@@ -28,6 +30,8 @@ def test_discover_connectors_disconnected() -> None:
 
     assert len(connectors) == 1
     assert connectors[0].name == "card1-HDMI-A-1"
+    assert connectors[0].status == "disconnected"
+    assert connectors[0].is_connected is False
 
 
 def test_connector_read_status_connected() -> None:

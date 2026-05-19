@@ -86,7 +86,12 @@ def discover_connectors(
     for path_str in paths:
         path = Path(path_str)
         name = path.name
-        status = "unknown" if sysfs_root else path.joinpath("status").read_text().strip()
+        status_path = path / "status"
+        try:
+            status = status_path.read_text().strip()
+        except (OSError, PermissionError) as e:
+            logger.warning("Cannot read %s: %s", status_path, e)
+            status = "unknown"
         connector = DrmConnector(
             name=name,
             sysfs_path=path,
