@@ -94,12 +94,18 @@ def create_rescan_action(media_scanner: Any) -> Any:
     return action
 
 
-def create_network_info_action() -> Any:
-    """Create an action to show network info."""
+def create_network_info_action(player: Any, osd_duration_ms: int = 5000) -> Any:
+    """Create an action to show network info.
+
+    Args:
+        player: MpvPlayer instance for OSD display.
+        osd_duration_ms: Duration in milliseconds for OSD display.
+    """
 
     def action() -> None:
         info = get_network_info()
         logger.info("Network info: %s", info)
+        asyncio.create_task(player.show_osd(info, osd_duration_ms))
 
     return action
 

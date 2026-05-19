@@ -141,7 +141,10 @@ class Daemon:
                 label="Rescan media",
                 action=create_rescan_action(self._load_media),
             ),
-            MenuItem(label="Show network info", action=create_network_info_action()),
+            MenuItem(
+                label="Show network info",
+                action=create_network_info_action(self.player, self.config.menu.osd_duration_ms),
+            ),
             MenuItem(
                 label="Reboot",
                 action=create_reboot_action(),
