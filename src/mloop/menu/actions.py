@@ -39,21 +39,26 @@ def create_volume_action(player: Any, current_volume: list[int]) -> Any:
     return action
 
 
-def create_audio_output_action(player: Any, outputs: list[str], current: list[int]) -> Any:
+def create_audio_output_action(
+    player: Any, outputs: list[tuple[str, str]], current: list[int]
+) -> Any:
     """Create an action to cycle audio outputs.
 
     Args:
         player: MpvPlayer instance.
-        outputs: List of audio output options.
+        outputs: List of ``(label, device_id)`` tuples resolved from mpv.
         current: Mutable list containing current index.
     """
 
     def action() -> None:
-        current[0] = (current[0] + 1) % len(outputs)
-        output = outputs[current[0]]
+        if not outputs:
+            return
 
-        asyncio.create_task(player.set_audio_output(output))
-        logger.info("Audio output changed to %s", output)
+        current[0] = (current[0] + 1) % len(outputs)
+        label, device_id = outputs[current[0]]
+
+        asyncio.create_task(player.set_audio_output(device_id))
+        logger.info("Audio output changed to %s (%s)", label, device_id)
 
     return action
 
