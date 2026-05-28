@@ -23,13 +23,33 @@ This guide covers setting up a development environment for MLOOP.
 
 ## Running MLOOP
 
-For development, use the dev-run script:
+### Development Mode (any OS)
+
+Use the dev-run script to run MLOOP without installing as a system service:
 
 ```bash
 ./scripts/dev-run.sh
 ```
 
-This runs MLOOP without installing as a system service.
+This uses a development config at `/tmp/mloop/config.toml` with paths safe for macOS/Linux development.
+
+**Requirements:** `mpv` must be installed. On macOS: `brew install mpv`. On Debian/Ubuntu: `sudo apt install mpv`.
+
+**Custom config:** Set `MLOOP_CONFIG_DIR` to use a different config directory:
+
+```bash
+export MLOOP_CONFIG_DIR="/path/to/config"
+python -m mloop
+```
+
+### Production Mode (Raspberry Pi)
+
+On a Raspberry Pi with MLOOP installed via `packaging/install.sh`, the daemon runs as a systemd service:
+
+```bash
+sudo systemctl status mloop
+sudo journalctl -u mloop -f
+```
 
 ## Code Structure
 
@@ -64,6 +84,8 @@ src/mloop/
 
 ## Testing
 
+### Automated Tests (any OS)
+
 ```bash
 # Run all tests
 pytest
@@ -73,7 +95,19 @@ pytest --cov=src/mloop
 
 # Run specific test file
 pytest tests/unit/test_config.py
+
+# Run with verbose output
+pytest -v
 ```
+
+The suite includes 64 tests (unit + integration) covering:
+- Config loading and defaults
+- Media scanning and playlist building
+- HDMI gesture state machine
+- mpv IPC client behavior
+- Menu model/controller/actions
+- Player backend factory
+- Fake sysfs HDMI watcher simulation
 
 ### Integration Tests
 
@@ -83,6 +117,24 @@ Integration tests use fake sysfs directories to simulate HDMI events:
 tests/fixtures/sysfs_connected/
 tests/fixtures/sysfs_disconnected/
 ```
+
+### Hardware Validation (Raspberry Pi only)
+
+For real-device testing, use the validation script:
+
+```bash
+./scripts/validate-player.sh /path/to/test-video.mp4
+```
+
+This compares mpv vs cvlc playback, measures CPU usage, and tests HDMI unplug/replug recovery. Generates a markdown report.
+
+To collect system debug info:
+
+```bash
+./scripts/collect-debug-info.sh
+```
+
+Document results in `docs/hardware-compatibility.md`.
 
 ## Code Style
 

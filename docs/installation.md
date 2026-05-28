@@ -1,6 +1,6 @@
 # Installation
 
-This guide walks you through installing MLOOP on a Raspberry Pi.
+This guide covers installing MLOOP on a Raspberry Pi. For development setup on any OS, see [development.md](development.md).
 
 ## Prerequisites
 
@@ -34,6 +34,18 @@ The install script handles everything automatically:
 - Enables and starts the systemd service
 
 > **Note:** The checkout directory can be removed after installation. MLOOP runs entirely from `/opt/mloop`.
+
+## Alternative: Build a Flashable Image
+
+Instead of installing on an existing Pi OS, you can build a pre-configured Raspberry Pi OS image with MLOOP baked in:
+
+```bash
+./packaging/image/build-pi-image.sh
+```
+
+Requires a Debian/Ubuntu host with Docker. Output is a `.img.xz` under `build/pi-gen/deploy/`. Flash with Raspberry Pi Imager or `dd`.
+
+See [packaging/image/README.md](../packaging/image/README.md) for details.
 
 ## Step 3: Configure MLOOP (optional)
 

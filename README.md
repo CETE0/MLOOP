@@ -39,6 +39,23 @@ mloopd
 
 For a full installation guide, see [docs/installation.md](docs/installation.md).
 
+## Development & Testing
+
+Run the automated test suite (works on any OS):
+
+```bash
+pip install -e ".[dev]"
+pytest --cov=src/mloop
+```
+
+Run the daemon in development mode (requires `mpv`):
+
+```bash
+./scripts/dev-run.sh
+```
+
+See [docs/development.md](docs/development.md) for the full guide.
+
 ## HDMI Gesture Control
 
 MLOOP uses HDMI unplug/replug gestures for configuration without a keyboard:
