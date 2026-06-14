@@ -7,7 +7,8 @@ name = "mloop"
 version = "0.1.0"
 description = "A Raspberry Pi video looper for galleries, museums, and kiosk installations"
 readme = "README.md"
-license = {text = "GPL-3.0-or-later"}
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE*"]
 requires-python = ">=3.11"
 authors = [
     {name = "MLOOP Contributors"}
