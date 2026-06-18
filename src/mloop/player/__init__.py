@@ -1,7 +1,7 @@
 """Player module for MLOOP."""
 
 from mloop.config import PlaybackConfig, PlayerConfig
-from mloop.player.backend import PlayerBackend
+from mloop.player.backend import PlayerBackend, PlayerCapabilities
 from mloop.player.cvlc import CvlcPlayer
 from mloop.player.mpv import MpvPlayer
 
@@ -29,4 +29,4 @@ def create_player(
     raise ValueError(f"Unsupported player backend: {backend}")
 
 
-__all__ = ["PlayerBackend", "MpvPlayer", "CvlcPlayer", "create_player"]
+__all__ = ["PlayerBackend", "PlayerCapabilities", "MpvPlayer", "CvlcPlayer", "create_player"]

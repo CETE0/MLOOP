@@ -11,7 +11,7 @@ from pathlib import Path
 
 from mloop.audio.devices import get_audio_device_id
 from mloop.config import PlaybackConfig, PlayerConfig
-from mloop.player.backend import PlayerBackend
+from mloop.player.backend import PlayerBackend, PlayerCapabilities
 from mloop.player.ipc import MpvIpcClient
 
 logger = logging.getLogger("mloop.player.mpv")
@@ -31,6 +31,16 @@ class MpvPlayer(PlayerBackend):
         self._process: subprocess.Popen | None = None
         self._ipc: MpvIpcClient | None = None
         self._running = False
+
+    @property
+    def capabilities(self) -> PlayerCapabilities:
+        """Return mpv runtime capabilities."""
+        return PlayerCapabilities(
+            osd=True,
+            runtime_volume=True,
+            runtime_rotation=True,
+            runtime_audio_output=True,
+        )
 
     def start(self) -> None:
         """Start the mpv process."""

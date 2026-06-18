@@ -187,63 +187,94 @@ class Daemon:
         if self.menu_controller is None:
             raise RuntimeError("Menu must be built before registering handlers")
         self.gesture_machine.clear_intent_callbacks()
+        if not self.player.capabilities.osd and self.config.hdmi_gestures.enabled:
+            self.logger.warning(
+                "HDMI menu requires OSD, but backend %s does not support it; disabling menu",
+                self.config.player.backend,
+            )
+            return
         self.gesture_machine.on_intent(self.menu_controller.handle_intent)
 
     def _build_menu(self) -> None:
         """Build the menu items."""
+        capabilities = self.player.capabilities
         items = [
             MenuItem(label="Resume playback", action=create_resume_action()),
-            MenuItem(
-                label="Volume",
-                action=create_volume_action(
-                    self.player,
-                    self.state,
-                    self._spawn_background,
-                    self._save_runtime_state,
-                ),
-            ),
-            MenuItem(
-                label="Audio output",
-                action=create_audio_output_action(
-                    self.player,
-                    ["auto", "hdmi", "system-default"],
-                    self.state,
-                    self._spawn_background,
-                    self._save_runtime_state,
-                ),
-            ),
-            MenuItem(
-                label="Rotate video",
-                action=create_rotation_action(
-                    self.player,
-                    self.state,
-                    self._spawn_background,
-                    self._save_runtime_state,
-                ),
-            ),
+        ]
+
+        if capabilities.runtime_volume:
+            items.append(
+                MenuItem(
+                    label="Volume",
+                    action=create_volume_action(
+                        self.player,
+                        self.state,
+                        self._spawn_background,
+                        self._save_runtime_state,
+                    ),
+                )
+            )
+
+        if capabilities.runtime_audio_output:
+            items.append(
+                MenuItem(
+                    label="Audio output",
+                    action=create_audio_output_action(
+                        self.player,
+                        ["auto", "hdmi", "system-default"],
+                        self.state,
+                        self._spawn_background,
+                        self._save_runtime_state,
+                    ),
+                )
+            )
+
+        if capabilities.runtime_rotation:
+            items.append(
+                MenuItem(
+                    label="Rotate video",
+                    action=create_rotation_action(
+                        self.player,
+                        self.state,
+                        self._spawn_background,
+                        self._save_runtime_state,
+                    ),
+                )
+            )
+
+        items.append(
             MenuItem(
                 label="Rescan media",
                 action=create_rescan_action(self._load_media, self._spawn_background),
-            ),
-            MenuItem(
-                label="Show network info",
-                action=create_network_info_action(
-                    self.player,
-                    self.config.menu.osd_duration_ms,
-                    self._spawn_background,
+            )
+        )
+
+        if capabilities.osd:
+            items.append(
+                MenuItem(
+                    label="Show network info",
+                    action=create_network_info_action(
+                        self.player,
+                        self.config.menu.osd_duration_ms,
+                        self._spawn_background,
+                    ),
+                )
+            )
+
+        items.extend(
+            [
+                MenuItem(
+                    label="Reboot",
+                    action=create_reboot_action(self._spawn_background),
+                    is_dangerous=True,
                 ),
-            ),
-            MenuItem(
-                label="Reboot",
-                action=create_reboot_action(self._spawn_background),
-                is_dangerous=True,
-            ),
-            MenuItem(
-                label="Shutdown",
-                action=create_shutdown_action(self._spawn_background),
-                is_dangerous=True,
-            ),
-        ]
+                MenuItem(
+                    label="Shutdown",
+                    action=create_shutdown_action(self._spawn_background),
+                    is_dangerous=True,
+                ),
+            ]
+        )
 
         self.menu_model = MenuModel(items)
         self.menu_controller = MenuController(self.menu_model, self.config.menu)
@@ -275,7 +306,7 @@ class Daemon:
         self.gesture_machine.handle_event(event)
 
         menu_model = self.menu_model
-        if menu_model is not None and menu_model.is_open:
+        if menu_model is not None and menu_model.is_open and self.player.capabilities.osd:
             self._spawn_background(
                 self.player.show_osd(menu_model.render(), self.config.menu.osd_duration_ms),
                 "show-menu-osd",

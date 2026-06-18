@@ -36,6 +36,8 @@ def test_mpv_player_is_backend() -> None:
     player = MpvPlayer(config)
     assert isinstance(player, PlayerBackend)
     assert isinstance(player, PlayerBackendDirect)
+    assert player.capabilities.osd is True
+    assert player.capabilities.runtime_volume is True
 
 
 def test_cvlc_player_is_backend() -> None:
@@ -44,6 +46,8 @@ def test_cvlc_player_is_backend() -> None:
     player = CvlcPlayer(config)
     assert isinstance(player, PlayerBackend)
     assert isinstance(player, PlayerBackendDirect)
+    assert player.capabilities.osd is False
+    assert player.capabilities.runtime_volume is False
 
 
 def test_player_backend_abstract_methods() -> None:
@@ -66,5 +70,5 @@ def test_player_backend_abstract_methods() -> None:
 
 def test_player_backend_properties() -> None:
     """PlayerBackend defines required abstract properties."""
-    for prop_name in ("is_running", "pid"):
+    for prop_name in ("capabilities", "is_running", "pid"):
         assert hasattr(PlayerBackend, prop_name), f"Missing property: {prop_name}"

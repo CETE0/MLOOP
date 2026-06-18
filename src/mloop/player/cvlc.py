@@ -10,7 +10,7 @@ import subprocess
 from pathlib import Path
 
 from mloop.config import PlaybackConfig, PlayerConfig
-from mloop.player.backend import PlayerBackend
+from mloop.player.backend import PlayerBackend, PlayerCapabilities
 
 logger = logging.getLogger("mloop.player.cvlc")
 
@@ -33,6 +33,16 @@ class CvlcPlayer(PlayerBackend):
         self.playback_config = playback_config or PlaybackConfig()
         self._process: subprocess.Popen | None = None
         self._running = False
+
+    @property
+    def capabilities(self) -> PlayerCapabilities:
+        """Return cvlc runtime capabilities."""
+        return PlayerCapabilities(
+            osd=False,
+            runtime_volume=False,
+            runtime_rotation=False,
+            runtime_audio_output=False,
+        )
 
     def start(self) -> None:
         """Start the cvlc process."""

@@ -3,11 +3,26 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from pathlib import Path
+
+
+@dataclass(frozen=True)
+class PlayerCapabilities:
+    osd: bool
+    runtime_volume: bool
+    runtime_rotation: bool
+    runtime_audio_output: bool
 
 
 class PlayerBackend(ABC):
     """Abstract base class for player backends (mpv, cvlc, etc.)."""
+
+    @property
+    @abstractmethod
+    def capabilities(self) -> PlayerCapabilities:
+        """Return supported runtime player capabilities."""
+        ...
 
     @abstractmethod
     def start(self) -> None:

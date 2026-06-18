@@ -1095,9 +1095,9 @@ Recommended now: mark as unimplemented roadmap or remove from example config to 
 
 ---
 
-# Phase 6 — Backend capabilities
+# Phase 6 — Backend capabilities [COMPLETED]
 
-## 6.1 Add capability reporting to player backends
+## 6.1 Add capability reporting to player backends [COMPLETED]
 
 ### Problem
 
