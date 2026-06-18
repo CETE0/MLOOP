@@ -26,6 +26,7 @@ from mloop.menu.actions import (
 from mloop.menu.controller import MenuController
 from mloop.menu.model import MenuItem, MenuModel
 from mloop.player import create_player
+from mloop.state import RuntimeState
 from mloop.system.platform import get_platform_info
 from mloop.system.service import ServiceManager
 
@@ -44,14 +45,20 @@ class Daemon:
         self.config = config or load_config()
         self.logger = setup_logging()
         self.service = ServiceManager()
-        self.player = create_player(self.config.player)
+        self.player = create_player(self.config.player, self.config.playback)
+        self.state = RuntimeState(
+            volume=self.config.playback.volume,
+            rotation=self.config.display.rotation,
+            audio_output=self.config.audio.output,
+        )
         self.gesture_machine = GestureStateMachine(self.config.hdmi_gestures)
         self.menu_model = MenuModel()
         self.menu_controller = MenuController(self.menu_model, self.config.menu)
         self._hdmi_watcher: HdmiWatcher | None = None
         self._watcher_task: asyncio.Task[None] | None = None
-        self._current_volume = [self.config.playback.volume]
-        self._current_rotation = [self.config.display.rotation]
+        self._player_restart_backoff_seconds = 0.0
+        self._current_volume = [self.state.volume]
+        self._current_rotation = [self.state.rotation]
         self._current_audio_idx = [0]
 
     async def run(self) -> None:
@@ -77,6 +84,8 @@ class Daemon:
             self._watcher_task = asyncio.create_task(self._hdmi_watcher.start())
 
         self.player.start()
+        await self._load_media()
+        await self._apply_player_state()
 
         try:
             await self._run_main_loop()
@@ -85,17 +94,47 @@ class Daemon:
 
     async def _run_main_loop(self) -> None:
         """Run the main event loop."""
-        await self._load_media()
-
         while self.service.is_running:
             now_ms = int(time.monotonic() * 1000)
             self.gesture_machine.check_timeouts(now_ms)
 
             if not self.player.is_running:
-                self.logger.warning("mpv exited unexpectedly, restarting")
-                self.player.start()
+                await self._recover_player()
 
             await asyncio.sleep(0.1)
+
+    async def _recover_player(self) -> None:
+        """Restart the player after an unexpected process exit."""
+        self.logger.warning("%s exited unexpectedly, restarting", type(self.player).__name__)
+
+        await self.player.reset_after_exit()
+
+        delay = self._player_restart_backoff_seconds
+        if delay > 0:
+            await asyncio.sleep(delay)
+
+        try:
+            self.player.start()
+            await self._load_media()
+            await self._apply_player_state()
+        except Exception:
+            self._player_restart_backoff_seconds = min(
+                max(1.0, self._player_restart_backoff_seconds * 2),
+                60.0,
+            )
+            self.logger.exception(
+                "Player restart failed; next retry in %.1fs",
+                self._player_restart_backoff_seconds,
+            )
+            return
+
+        self._player_restart_backoff_seconds = 0.0
+
+    async def _apply_player_state(self) -> None:
+        """Apply configured runtime player state."""
+        await self.player.set_volume(self.state.volume)
+        await self.player.set_rotation(self.state.rotation)
+        await self.player.set_audio_output(self.state.audio_output)
 
     async def stop(self) -> None:
         """Stop the daemon."""
@@ -174,7 +213,6 @@ class Daemon:
         playlist = build_playlist(
             files,
             shuffle=self.config.playback.shuffle,
-            loop=self.config.playback.loop,
         )
 
         self.logger.info("Loaded %d files into playlist", len(playlist))

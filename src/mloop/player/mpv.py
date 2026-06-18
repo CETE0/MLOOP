@@ -9,7 +9,8 @@ import signal
 import subprocess
 from pathlib import Path
 
-from mloop.config import PlayerConfig
+from mloop.audio.devices import get_audio_device_id
+from mloop.config import PlaybackConfig, PlayerConfig
 from mloop.player.backend import PlayerBackend
 from mloop.player.ipc import MpvIpcClient
 
@@ -19,13 +20,14 @@ logger = logging.getLogger("mloop.player.mpv")
 class MpvPlayer(PlayerBackend):
     """mpv playback controller."""
 
-    def __init__(self, config: PlayerConfig) -> None:
+    def __init__(self, config: PlayerConfig, playback_config: PlaybackConfig | None = None) -> None:
         """Initialize the mpv player.
 
         Args:
             config: Player configuration.
         """
         self.config = config
+        self.playback_config = playback_config or PlaybackConfig()
         self._process: subprocess.Popen | None = None
         self._ipc: MpvIpcClient | None = None
         self._running = False
@@ -43,7 +45,8 @@ class MpvPlayer(PlayerBackend):
             self.config.mpv_path,
             "--fullscreen",
             "--idle=yes",
-            "--loop-playlist=inf",
+            f"--loop-playlist={'inf' if self.playback_config.loop else 'no'}",
+            f"--image-display-duration={self.playback_config.image_duration_seconds}",
             f"--input-ipc-server={socket_path}",
             "--osd-level=1",
             "--no-terminal",
@@ -66,11 +69,23 @@ class MpvPlayer(PlayerBackend):
             try:
                 os.killpg(os.getpgid(self._process.pid), signal.SIGTERM)
                 self._process.wait(timeout=5)
-            except (ProcessLookupError, TimeoutError):
+            except subprocess.TimeoutExpired:
+                logger.warning("mpv did not exit after SIGTERM; sending SIGKILL")
                 with contextlib.suppress(ProcessLookupError):
                     os.killpg(os.getpgid(self._process.pid), signal.SIGKILL)
+                    self._process.wait(timeout=5)
+            except ProcessLookupError:
+                pass
             self._process = None
             self._running = False
+
+    async def reset_after_exit(self) -> None:
+        """Clear transient state after the mpv process exits unexpectedly."""
+        if self._ipc is not None:
+            await self._ipc.disconnect()
+            self._ipc = None
+        self._process = None
+        self._running = False
 
     async def connect_ipc(self) -> MpvIpcClient:
         """Connect to mpv IPC socket.
@@ -131,7 +146,7 @@ class MpvPlayer(PlayerBackend):
             output: Audio output device name.
         """
         ipc = await self.connect_ipc()
-        await ipc.set_property("audio-device", output)
+        await ipc.set_property("audio-device", get_audio_device_id(output))
         logger.info("Audio output set to %s", output)
 
     async def show_osd(self, text: str, duration: int = 5000) -> None:

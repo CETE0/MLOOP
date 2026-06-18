@@ -33,6 +33,9 @@ def _patch_daemon_player(daemon, monkeypatch):
     monkeypatch.setattr(daemon.player, "stop", lambda: None)
     monkeypatch.setattr(daemon.player, "show_osd", lambda *a, **kw: asyncio.sleep(0))
     monkeypatch.setattr(daemon.player, "load_playlist", lambda *a, **kw: asyncio.sleep(0))
+    monkeypatch.setattr(daemon.player, "set_volume", lambda *a, **kw: asyncio.sleep(0))
+    monkeypatch.setattr(daemon.player, "set_rotation", lambda *a, **kw: asyncio.sleep(0))
+    monkeypatch.setattr(daemon.player, "set_audio_output", lambda *a, **kw: asyncio.sleep(0))
 
 
 @pytest.mark.asyncio

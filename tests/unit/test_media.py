@@ -40,21 +40,20 @@ def test_build_playlist_empty() -> None:
 def test_build_playlist_no_shuffle() -> None:
     """Test building playlist without shuffle."""
     files = [Path("b.mp4"), Path("a.mp4"), Path("c.mp4")]
-    playlist = build_playlist(files, shuffle=False, loop=False)
+    playlist = build_playlist(files, shuffle=False)
     assert playlist == files
 
 
-def test_build_playlist_loop() -> None:
-    """Test building looping playlist."""
+def test_build_playlist_does_not_duplicate_for_loop() -> None:
+    """Test that looping is handled by player backends."""
     files = [Path("a.mp4"), Path("b.mp4")]
-    playlist = build_playlist(files, shuffle=False, loop=True)
-    assert len(playlist) == 4
-    assert playlist == [Path("a.mp4"), Path("b.mp4"), Path("a.mp4"), Path("b.mp4")]
+    playlist = build_playlist(files, shuffle=False)
+    assert playlist == files
 
 
 def test_build_playlist_shuffle() -> None:
     """Test building shuffled playlist."""
     files = [Path(f"video{i}.mp4") for i in range(10)]
-    playlist = build_playlist(files, shuffle=True, loop=False)
+    playlist = build_playlist(files, shuffle=True)
     assert len(playlist) == len(files)
     assert set(playlist) == set(files)

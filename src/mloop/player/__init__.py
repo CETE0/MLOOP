@@ -1,11 +1,15 @@
 """Player module for MLOOP."""
 
+from mloop.config import PlaybackConfig, PlayerConfig
 from mloop.player.backend import PlayerBackend
 from mloop.player.cvlc import CvlcPlayer
 from mloop.player.mpv import MpvPlayer
 
 
-def create_player(config) -> PlayerBackend:
+def create_player(
+    config: PlayerConfig,
+    playback_config: PlaybackConfig | None = None,
+) -> PlayerBackend:
     """Create a player backend instance from configuration.
 
     Args:
@@ -19,9 +23,9 @@ def create_player(config) -> PlayerBackend:
     """
     backend = config.backend
     if backend == "mpv":
-        return MpvPlayer(config)
+        return MpvPlayer(config, playback_config)
     if backend == "cvlc":
-        return CvlcPlayer(config)
+        return CvlcPlayer(config, playback_config)
     raise ValueError(f"Unsupported player backend: {backend}")
 
 

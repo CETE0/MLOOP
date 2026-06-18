@@ -20,6 +20,11 @@ class PlayerBackend(ABC):
         ...
 
     @abstractmethod
+    async def reset_after_exit(self) -> None:
+        """Clear transient state after the player process exits unexpectedly."""
+        ...
+
+    @abstractmethod
     async def load_playlist(self, files: list[Path]) -> None:
         """Load a playlist of media files.
 

@@ -56,6 +56,7 @@ def test_player_backend_abstract_methods() -> None:
         "set_rotation",
         "set_audio_output",
         "show_osd",
+        "reset_after_exit",
     }
     for method_name in required:
         assert hasattr(PlayerBackend, method_name), f"Missing abstract method: {method_name}"

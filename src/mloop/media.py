@@ -35,14 +35,12 @@ def scan_media_dirs(directories: list[str]) -> list[Path]:
 def build_playlist(
     files: list[Path],
     shuffle: bool = False,
-    loop: bool = True,
 ) -> list[Path]:
     """Build a playlist from media files.
 
     Args:
         files: List of media file paths.
         shuffle: Whether to shuffle the playlist.
-        loop: Whether to loop the playlist.
 
     Returns:
         Playlist as a list of file paths.
@@ -54,9 +52,6 @@ def build_playlist(
 
     if shuffle:
         random.shuffle(playlist)
-
-    if loop:
-        playlist.extend(playlist)
 
     return playlist
 

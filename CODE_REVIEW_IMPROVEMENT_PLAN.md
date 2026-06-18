@@ -197,9 +197,9 @@ def _parse_section(data: dict[str, Any], cls: type[T]) -> T:
 
 ---
 
-# Phase 2 — Player lifecycle and crash recovery
+# Phase 2 — Player lifecycle and crash recovery [COMPLETED]
 
-## 2.1 Introduce explicit player lifecycle reset/restart semantics
+## 2.1 Introduce explicit player lifecycle reset/restart semantics [COMPLETED]
 
 ### Problem
 
@@ -328,7 +328,7 @@ async def test_player_crash_reloads_media(monkeypatch, tmp_path):
 
 ---
 
-## 2.2 Catch the correct player stop timeout
+## 2.2 Catch the correct player stop timeout [COMPLETED]
 
 ### Problem
 
@@ -361,7 +361,7 @@ call and succeeds after SIGKILL. Assert `os.killpg` receives both `SIGTERM` and 
 
 ---
 
-## 2.3 Apply documented playback settings on startup and recovery
+## 2.3 Apply documented playback settings on startup and recovery [COMPLETED]
 
 ### Problem
 
@@ -1018,7 +1018,7 @@ def next_rotation(current: int) -> int:
 
 ---
 
-## 5.4 Fix playlist loop semantics
+## 5.4 Fix playlist loop semantics [COMPLETED]
 
 ### Problem
 

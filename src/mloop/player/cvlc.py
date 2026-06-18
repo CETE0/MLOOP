@@ -9,7 +9,7 @@ import signal
 import subprocess
 from pathlib import Path
 
-from mloop.config import PlayerConfig
+from mloop.config import PlaybackConfig, PlayerConfig
 from mloop.player.backend import PlayerBackend
 
 logger = logging.getLogger("mloop.player.cvlc")
@@ -23,13 +23,14 @@ class CvlcPlayer(PlayerBackend):
     some interactive controls are limited to process-level management.
     """
 
-    def __init__(self, config: PlayerConfig) -> None:
+    def __init__(self, config: PlayerConfig, playback_config: PlaybackConfig | None = None) -> None:
         """Initialize the cvlc player.
 
         Args:
             config: Player configuration.
         """
         self.config = config
+        self.playback_config = playback_config or PlaybackConfig()
         self._process: subprocess.Popen | None = None
         self._running = False
 
@@ -38,11 +39,12 @@ class CvlcPlayer(PlayerBackend):
         args = [
             self.config.cvlc_path,
             "--fullscreen",
-            "--loop",
             "--no-osd",
             "--intf=dummy",
             "--no-video-title-show",
         ]
+        if self.playback_config.loop:
+            args.append("--loop")
 
         logger.info("Starting cvlc: %s", " ".join(args))
 
@@ -61,11 +63,20 @@ class CvlcPlayer(PlayerBackend):
             try:
                 os.killpg(os.getpgid(self._process.pid), signal.SIGTERM)
                 self._process.wait(timeout=5)
-            except (ProcessLookupError, TimeoutError):
+            except subprocess.TimeoutExpired:
+                logger.warning("cvlc did not exit after SIGTERM; sending SIGKILL")
                 with contextlib.suppress(ProcessLookupError):
                     os.killpg(os.getpgid(self._process.pid), signal.SIGKILL)
+                    self._process.wait(timeout=5)
+            except ProcessLookupError:
+                pass
             self._process = None
             self._running = False
+
+    async def reset_after_exit(self) -> None:
+        """Clear transient state after the cvlc process exits unexpectedly."""
+        self._process = None
+        self._running = False
 
     async def load_playlist(self, files: list[Path]) -> None:
         """Load a playlist of files by restarting cvlc with file arguments.
@@ -78,11 +89,12 @@ class CvlcPlayer(PlayerBackend):
         args = [
             self.config.cvlc_path,
             "--fullscreen",
-            "--loop",
             "--no-osd",
             "--intf=dummy",
             "--no-video-title-show",
         ]
+        if self.playback_config.loop:
+            args.append("--loop")
         args.extend(str(f) for f in files)
 
         logger.info("Starting cvlc with %d files", len(files))
