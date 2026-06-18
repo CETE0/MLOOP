@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import dataclasses
 import tomllib
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields, is_dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 DEFAULT_CONFIG_PATH = Path("/etc/mloop/config.toml")
 DEFAULT_STATE_PATH = Path("/var/lib/mloop/state.toml")
@@ -27,6 +27,8 @@ SUPPORTED_EXTENSIONS: frozenset[str] = frozenset(
         ".png",
     }
 )
+
+T = TypeVar("T")
 
 
 @dataclass
@@ -110,15 +112,16 @@ class Config:
     web: WebConfig = field(default_factory=WebConfig)
 
 
-def _parse_section(data: dict[str, Any], cls: type, defaults: type) -> Any:
+def _parse_section(data: dict[str, Any], cls: type[T]) -> T:
     """Parse a configuration section from TOML data."""
-    defaults_dict = {}
-    for f in defaults.__dataclass_fields__.values():
-        if f.default_factory is not None and not isinstance(
-            f.default_factory, type(dataclasses.MISSING)
-        ):
+    if not is_dataclass(cls):
+        raise TypeError(f"{cls!r} is not a dataclass")
+
+    defaults_dict: dict[str, Any] = {}
+    for f in fields(cls):
+        if f.default_factory is not dataclasses.MISSING:
             defaults_dict[f.name] = f.default_factory()
-        elif not isinstance(f.default, type(dataclasses.MISSING)):
+        elif f.default is not dataclasses.MISSING:
             defaults_dict[f.name] = f.default
     merged = {**defaults_dict, **{k: v for k, v in data.items() if k in defaults_dict}}
     return cls(**merged)
@@ -140,15 +143,13 @@ def load_config(path: Path | None = None) -> Config:
         with open(config_path, "rb") as f:
             data = tomllib.load(f)
 
-    playback = _parse_section(data.get("playback", {}), PlaybackConfig, PlaybackConfig)
-    player = _parse_section(data.get("player", {}), PlayerConfig, PlayerConfig)
-    display = _parse_section(data.get("display", {}), DisplayConfig, DisplayConfig)
-    audio = _parse_section(data.get("audio", {}), AudioConfig, AudioConfig)
-    hdmi_gestures = _parse_section(
-        data.get("hdmi_gestures", {}), HdmiGesturesConfig, HdmiGesturesConfig
-    )
-    menu = _parse_section(data.get("menu", {}), MenuConfig, MenuConfig)
-    web = _parse_section(data.get("web", {}), WebConfig, WebConfig)
+    playback = _parse_section(data.get("playback", {}), PlaybackConfig)
+    player = _parse_section(data.get("player", {}), PlayerConfig)
+    display = _parse_section(data.get("display", {}), DisplayConfig)
+    audio = _parse_section(data.get("audio", {}), AudioConfig)
+    hdmi_gestures = _parse_section(data.get("hdmi_gestures", {}), HdmiGesturesConfig)
+    menu = _parse_section(data.get("menu", {}), MenuConfig)
+    web = _parse_section(data.get("web", {}), WebConfig)
 
     return Config(
         playback=playback,

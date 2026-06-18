@@ -34,6 +34,10 @@ jobs:
         run: |
           ruff format --check .
 
+      - name: Type check with mypy
+        run: |
+          mypy src/mloop
+
       - name: Run tests
         run: |
           pytest --cov=src/mloop

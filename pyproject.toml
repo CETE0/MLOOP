@@ -46,3 +46,12 @@ where = ["src"]
 testpaths = ["tests"]
 pythonpath = ["src"]
 asyncio_mode = "auto"
+
+[tool.mypy]
+python_version = "3.11"
+packages = ["mloop"]
+warn_unused_configs = true
+warn_return_any = true
+warn_unused_ignores = true
+no_implicit_optional = true
+check_untyped_defs = true
