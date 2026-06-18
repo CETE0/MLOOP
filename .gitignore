@@ -51,3 +51,5 @@ Thumbs.db
 /run/
 /state/
 /logs/
+/plans/
+/*PLAN*.md
