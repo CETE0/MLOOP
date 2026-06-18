@@ -5,159 +5,159 @@ from __future__ import annotations
 import asyncio
 import logging
 import socket
-import subprocess
-from typing import Any
+from collections.abc import Awaitable, Callable
+
+from mloop.player.backend import PlayerBackend
+from mloop.state import RuntimeState
 
 logger = logging.getLogger("mloop.menu.actions")
 
+Action = Callable[[], None]
+SpawnFunc = Callable[[Awaitable[object], str], None]
+SaveStateFunc = Callable[[], None]
 
-def create_resume_action() -> Any:
-    """Create an action to resume playback."""
 
+def create_resume_action() -> Action:
     def action() -> None:
         logger.info("Resuming playback")
 
     return action
 
 
-def create_volume_action(player: Any, current_volume: list[int]) -> Any:
-    """Create an action to adjust volume.
-
-    Args:
-        player: MpvPlayer instance.
-        current_volume: Mutable list containing current volume.
-    """
-
+def create_volume_action(
+    player: PlayerBackend,
+    state: RuntimeState,
+    spawn: SpawnFunc,
+    save_state: SaveStateFunc,
+) -> Action:
     def action() -> None:
-        current_volume[0] = (current_volume[0] + 10) % 110
-        if current_volume[0] == 0:
-            current_volume[0] = 10
+        state.volume += 10
+        if state.volume > 100:
+            state.volume = 10
 
-        asyncio.create_task(player.set_volume(current_volume[0]))
-        logger.info("Volume changed to %d", current_volume[0])
+        save_state()
+        spawn(player.set_volume(state.volume), "set-volume")
+        logger.info("Volume changed to %d", state.volume)
 
     return action
 
 
-def create_audio_output_action(player: Any, outputs: list[str], current: list[int]) -> Any:
-    """Create an action to cycle audio outputs.
-
-    Args:
-        player: MpvPlayer instance.
-        outputs: List of audio output options.
-        current: Mutable list containing current index.
-    """
-
+def create_audio_output_action(
+    player: PlayerBackend,
+    outputs: list[str],
+    state: RuntimeState,
+    spawn: SpawnFunc,
+    save_state: SaveStateFunc,
+) -> Action:
     def action() -> None:
-        current[0] = (current[0] + 1) % len(outputs)
-        output = outputs[current[0]]
+        try:
+            current_index = outputs.index(state.audio_output)
+        except ValueError:
+            current_index = 0
+        state.audio_output = outputs[(current_index + 1) % len(outputs)]
 
-        asyncio.create_task(player.set_audio_output(output))
-        logger.info("Audio output changed to %s", output)
+        save_state()
+        spawn(player.set_audio_output(state.audio_output), "set-audio-output")
+        logger.info("Audio output changed to %s", state.audio_output)
 
     return action
 
 
-def create_rotation_action(player: Any, current_rotation: list[int]) -> Any:
-    """Create an action to cycle video rotation.
-
-    Args:
-        player: MpvPlayer instance.
-        current_rotation: Mutable list containing current rotation.
-    """
-
+def create_rotation_action(
+    player: PlayerBackend,
+    state: RuntimeState,
+    spawn: SpawnFunc,
+    save_state: SaveStateFunc,
+) -> Action:
     def action() -> None:
-        rotations = [0, 90, 180, 270]
-        idx = rotations.index(current_rotation[0])
-        current_rotation[0] = rotations[(idx + 1) % len(rotations)]
+        state.rotation = next_rotation(state.rotation)
 
-        asyncio.create_task(player.set_rotation(current_rotation[0]))
-        logger.info("Rotation changed to %d", current_rotation[0])
+        save_state()
+        spawn(player.set_rotation(state.rotation), "set-rotation")
+        logger.info("Rotation changed to %d", state.rotation)
 
     return action
 
 
-def create_rescan_action(media_scanner: Any) -> Any:
-    """Create an action to rescan media.
+def next_rotation(current: int) -> int:
+    rotations = [0, 90, 180, 270]
+    try:
+        current_index = rotations.index(current)
+    except ValueError:
+        current_index = 0
+    return rotations[(current_index + 1) % len(rotations)]
 
-    Args:
-        media_scanner: Media scanner callable (sync or async).
-    """
 
+def create_rescan_action(
+    media_scanner: Callable[[], Awaitable[object]], spawn: SpawnFunc
+) -> Action:
     def action() -> None:
         logger.info("Rescanning media")
-        if asyncio.iscoroutinefunction(media_scanner):
-            asyncio.create_task(media_scanner())
-        else:
-            media_scanner()
+        spawn(media_scanner(), "rescan-media")
 
     return action
 
 
-def create_network_info_action(player: Any, osd_duration_ms: int = 5000) -> Any:
-    """Create an action to show network info.
-
-    Args:
-        player: MpvPlayer instance for OSD display.
-        osd_duration_ms: Duration in milliseconds for OSD display.
-    """
+def create_network_info_action(
+    player: PlayerBackend,
+    osd_duration_ms: int,
+    spawn: SpawnFunc,
+) -> Action:
+    async def run() -> None:
+        info = await get_network_info_async()
+        logger.info("Network info: %s", info)
+        await player.show_osd(info, osd_duration_ms)
 
     def action() -> None:
-        info = get_network_info()
-        logger.info("Network info: %s", info)
-        asyncio.create_task(player.show_osd(info, osd_duration_ms))
+        spawn(run(), "network-info")
 
     return action
 
 
-def get_network_info() -> str:
-    """Get network information.
-
-    Returns:
-        String with network information.
-    """
+async def get_network_info_async() -> str:
     lines = ["=== Network Info ===", ""]
+    lines.append(f"Hostname: {socket.gethostname()}")
 
     try:
-        hostname = socket.gethostname()
-        lines.append(f"Hostname: {hostname}")
-    except Exception:
-        lines.append("Hostname: unknown")
-
-    try:
-        result = subprocess.run(
-            ["ip", "-4", "addr", "show"],
-            capture_output=True,
-            text=True,
-            timeout=5,
+        proc = await asyncio.create_subprocess_exec(
+            "ip",
+            "-4",
+            "addr",
+            "show",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
-        if result.returncode == 0:
-            for line in result.stdout.split("\n"):
-                if "inet " in line:
-                    parts = line.strip().split()
-                    if len(parts) >= 2:
-                        lines.append(f"IP: {parts[1]}")
-    except Exception:
-        pass
+        stdout, _stderr = await asyncio.wait_for(proc.communicate(), timeout=5)
+    except (OSError, TimeoutError) as exc:
+        logger.debug("Could not get network info: %s", exc)
+        return "\n".join(lines)
+
+    if proc.returncode == 0:
+        for line in stdout.decode().splitlines():
+            if "inet " in line:
+                parts = line.strip().split()
+                if len(parts) >= 2:
+                    lines.append(f"IP: {parts[1]}")
 
     return "\n".join(lines)
 
 
-def create_reboot_action() -> Any:
-    """Create an action to reboot the system."""
+async def run_system_command(*args: str) -> None:
+    proc = await asyncio.create_subprocess_exec(*args)
+    await proc.wait()
 
+
+def create_reboot_action(spawn: SpawnFunc) -> Action:
     def action() -> None:
         logger.info("Rebooting system")
-        subprocess.run(["sudo", "reboot"], check=False)
+        spawn(run_system_command("sudo", "reboot"), "reboot")
 
     return action
 
 
-def create_shutdown_action() -> Any:
-    """Create an action to shutdown the system."""
-
+def create_shutdown_action(spawn: SpawnFunc) -> Action:
     def action() -> None:
         logger.info("Shutting down system")
-        subprocess.run(["sudo", "shutdown", "now"], check=False)
+        spawn(run_system_command("sudo", "shutdown", "now"), "shutdown")
 
     return action

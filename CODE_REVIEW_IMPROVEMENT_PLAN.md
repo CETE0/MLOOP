@@ -637,9 +637,9 @@ Use Option B and add invariant tests around timeout/select flows.
 
 ---
 
-# Phase 4 — Async hygiene
+# Phase 4 — Async hygiene [COMPLETED]
 
-## 4.1 Supervise background tasks
+## 4.1 Supervise background tasks [COMPLETED]
 
 ### Problem
 
@@ -757,7 +757,7 @@ def create_volume_action(player: PlayerBackend, state: PlayerState, spawn: Spawn
 
 ---
 
-## 4.2 Move blocking subprocess calls off the event loop
+## 4.2 Move blocking subprocess calls off the event loop [COMPLETED]
 
 ### Problem
 
@@ -892,7 +892,7 @@ def test_invalid_rotation_rejected(tmp_path, rotation):
 
 ---
 
-## 5.2 Decide and implement state persistence
+## 5.2 Decide and implement state persistence [COMPLETED]
 
 ### Problem
 
@@ -978,7 +978,7 @@ Implement persistence for `volume`, `rotation`, and `audio_output`; it matches k
 
 ---
 
-## 5.3 Replace single-element mutable lists with state object
+## 5.3 Replace single-element mutable lists with state object [COMPLETED]
 
 ### Problem
 
@@ -1192,7 +1192,7 @@ if not self.player.capabilities.osd and self.config.hdmi_gestures.enabled:
 
 # Phase 7 — Low-level polish and maintainability
 
-## 7.1 IPC future creation and request ID handling
+## 7.1 IPC future creation and request ID handling [COMPLETED]
 
 ### Planned snippet
 

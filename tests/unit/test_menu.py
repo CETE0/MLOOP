@@ -1,14 +1,15 @@
 """Tests for menu model and controller."""
 
-from unittest.mock import MagicMock, patch
+from collections.abc import Awaitable
 
 import pytest
 
 from mloop.config import MenuConfig
 from mloop.gestures.events import GestureIntent
-from mloop.menu.actions import create_network_info_action
+from mloop.menu.actions import create_network_info_action, create_volume_action
 from mloop.menu.controller import MenuController
 from mloop.menu.model import MenuItem, MenuModel
+from mloop.state import RuntimeState
 
 
 @pytest.fixture
@@ -130,18 +131,59 @@ def test_dangerous_item_requires_confirmation() -> None:
     assert len(executed) == 1
 
 
-def test_network_info_action_shows_osd() -> None:
+class _FakePlayer:
+    def __init__(self) -> None:
+        self.osd_calls: list[tuple[str, int]] = []
+        self.volume_calls: list[int] = []
+
+    async def show_osd(self, text: str, duration: int = 5000) -> None:
+        self.osd_calls.append((text, duration))
+
+    async def set_volume(self, volume: int) -> None:
+        self.volume_calls.append(volume)
+
+
+@pytest.mark.asyncio
+async def test_network_info_action_shows_osd(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test that network info action renders info through player OSD."""
-    player = MagicMock()
+    player = _FakePlayer()
     osd_duration = 7000
-    action = create_network_info_action(player, osd_duration)
+    spawned: list[tuple[Awaitable[object], str]] = []
 
-    with patch("mloop.menu.actions.asyncio.create_task") as mock_create_task:
-        action()
+    async def fake_network_info() -> str:
+        return "=== Network Info ===\n\nHostname: test-host"
 
-    mock_create_task.assert_called_once()
+    def spawn(awaitable: Awaitable[object], name: str) -> None:
+        spawned.append((awaitable, name))
 
-    player.show_osd.assert_called_once()
-    call_args = player.show_osd.call_args
-    assert "=== Network Info ===" in call_args[0][0]
-    assert call_args[0][1] == osd_duration
+    monkeypatch.setattr("mloop.menu.actions.get_network_info_async", fake_network_info)
+    action = create_network_info_action(player, osd_duration, spawn)
+    action()
+
+    assert len(spawned) == 1
+    assert spawned[0][1] == "network-info"
+    await spawned[0][0]
+    assert player.osd_calls == [("=== Network Info ===\n\nHostname: test-host", osd_duration)]
+
+
+def test_volume_action_updates_runtime_state_and_spawns_player_call() -> None:
+    player = _FakePlayer()
+    state = RuntimeState(volume=90, rotation=0, audio_output="auto")
+    saved = 0
+    spawned: list[tuple[Awaitable[object], str]] = []
+
+    def save_state() -> None:
+        nonlocal saved
+        saved += 1
+
+    def spawn(awaitable: Awaitable[object], name: str) -> None:
+        spawned.append((awaitable, name))
+        awaitable.close()
+
+    action = create_volume_action(player, state, spawn, save_state)
+    action()
+
+    assert state.volume == 100
+    assert saved == 1
+    assert len(spawned) == 1
+    assert spawned[0][1] == "set-volume"

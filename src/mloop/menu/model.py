@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
+
+Action = Callable[[], None]
 
 
 @dataclass
@@ -12,7 +13,7 @@ class MenuItem:
     """A single menu item."""
 
     label: str
-    action: Callable[[], Any]
+    action: Action
     is_dangerous: bool = False
     submenu: list[MenuItem] | None = None
 

@@ -6,9 +6,12 @@ import asyncio
 import contextlib
 import json
 import logging
-from typing import Any
+from typing import cast
 
 logger = logging.getLogger("mloop.player.ipc")
+
+JsonValue = None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
+JsonObject = dict[str, JsonValue]
 
 
 class MpvIpcClient:
@@ -24,7 +27,8 @@ class MpvIpcClient:
         self._reader: asyncio.StreamReader | None = None
         self._writer: asyncio.StreamWriter | None = None
         self._request_id = 0
-        self._pending_requests: dict[int, asyncio.Future] = {}
+        self._pending_requests: dict[int, asyncio.Future[JsonObject]] = {}
+        self._read_task: asyncio.Task[None] | None = None
 
     async def connect(self) -> None:
         """Connect to the mpv IPC socket."""
@@ -33,7 +37,7 @@ class MpvIpcClient:
             try:
                 self._reader, self._writer = await asyncio.open_unix_connection(self.socket_path)
                 logger.info("Connected to mpv IPC socket")
-                asyncio.create_task(self._read_loop())
+                self._read_task = asyncio.create_task(self._read_loop(), name="mpv-ipc-read")
                 return
             except (ConnectionRefusedError, FileNotFoundError):
                 if attempt < max_retries - 1:
@@ -45,6 +49,12 @@ class MpvIpcClient:
 
     async def disconnect(self) -> None:
         """Disconnect from the mpv IPC socket."""
+        if self._read_task is not None:
+            self._read_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._read_task
+            self._read_task = None
+
         if self._writer:
             self._writer.close()
             with contextlib.suppress(Exception):
@@ -64,19 +74,30 @@ class MpvIpcClient:
                     break
 
                 try:
-                    data = json.loads(line.decode("utf-8"))
+                    data = cast(JsonObject, json.loads(line.decode("utf-8")))
                     request_id = data.get("request_id")
-                    if request_id and request_id in self._pending_requests:
+                    if (
+                        isinstance(request_id, int)
+                        and not isinstance(request_id, bool)
+                        and request_id in self._pending_requests
+                    ):
                         future = self._pending_requests.pop(request_id)
-                        future.set_result(data)
+                        if not future.done():
+                            future.set_result(data)
                 except (json.JSONDecodeError, UnicodeDecodeError) as e:
                     logger.warning("Failed to parse IPC message: %s", e)
         except asyncio.CancelledError:
-            pass
+            raise
         except Exception as e:
             logger.error("IPC read error: %s", e)
+        finally:
+            exc = ConnectionError("mpv IPC connection closed")
+            for future in self._pending_requests.values():
+                if not future.done():
+                    future.set_exception(exc)
+            self._pending_requests.clear()
 
-    async def _send_command(self, command: list[Any]) -> dict[str, Any]:
+    async def _send_command(self, command: list[JsonValue]) -> JsonObject:
         """Send a command to mpv and wait for response.
 
         Args:
@@ -96,7 +117,7 @@ class MpvIpcClient:
             "request_id": request_id,
         }
 
-        future: asyncio.Future[dict[str, Any]] = asyncio.get_event_loop().create_future()
+        future = asyncio.get_running_loop().create_future()
         self._pending_requests[request_id] = future
 
         data = json.dumps(message) + "\n"
@@ -109,7 +130,7 @@ class MpvIpcClient:
             self._pending_requests.pop(request_id, None)
             raise TimeoutError("mpv IPC request timed out") from e
 
-    async def command(self, *args: Any) -> dict[str, Any]:
+    async def command(self, *args: JsonValue) -> JsonObject:
         """Send a command to mpv.
 
         Args:
@@ -120,7 +141,7 @@ class MpvIpcClient:
         """
         return await self._send_command(list(args))
 
-    async def set_property(self, name: str, value: Any) -> dict[str, Any]:
+    async def set_property(self, name: str, value: JsonValue) -> JsonObject:
         """Set an mpv property.
 
         Args:
@@ -132,7 +153,7 @@ class MpvIpcClient:
         """
         return await self.command("set_property", name, value)
 
-    async def get_property(self, name: str) -> Any:
+    async def get_property(self, name: str) -> JsonValue:
         """Get an mpv property.
 
         Args:
@@ -144,7 +165,7 @@ class MpvIpcClient:
         response = await self.command("get_property", name)
         return response.get("data")
 
-    async def show_text(self, text: str, duration: int = 3000, level: int = 1) -> dict[str, Any]:
+    async def show_text(self, text: str, duration: int = 3000, level: int = 1) -> JsonObject:
         """Show text on the OSD.
 
         Args:
@@ -161,7 +182,7 @@ class MpvIpcClient:
         self,
         path: str,
         mode: str = "replace",
-    ) -> dict[str, Any]:
+    ) -> JsonObject:
         """Load a file for playback.
 
         Args:
@@ -173,15 +194,15 @@ class MpvIpcClient:
         """
         return await self.command("loadfile", path, mode)
 
-    async def playlist_clear(self) -> dict[str, Any]:
+    async def playlist_clear(self) -> JsonObject:
         """Clear the playlist."""
         return await self.command("playlist_clear")
 
-    async def playlist_next(self) -> dict[str, Any]:
+    async def playlist_next(self) -> JsonObject:
         """Go to next item in playlist."""
         return await self.command("playlist_next")
 
-    async def set_volume(self, volume: int) -> dict[str, Any]:
+    async def set_volume(self, volume: int) -> JsonObject:
         """Set playback volume.
 
         Args:
@@ -192,7 +213,7 @@ class MpvIpcClient:
         """
         return await self.set_property("volume", volume)
 
-    async def set_af(self, audio_filter: str) -> dict[str, Any]:
+    async def set_af(self, audio_filter: str) -> JsonObject:
         """Set audio filter.
 
         Args:
@@ -203,7 +224,7 @@ class MpvIpcClient:
         """
         return await self.set_property("af", audio_filter)
 
-    async def set_vf(self, video_filter: str) -> dict[str, Any]:
+    async def set_vf(self, video_filter: str) -> JsonObject:
         """Set video filter.
 
         Args:

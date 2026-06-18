@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
+import json
 import tomllib
 from collections.abc import Mapping
 from dataclasses import dataclass, field, fields, is_dataclass
@@ -273,9 +274,9 @@ def save_state(state: dict[str, object], path: Path | None = None) -> None:
         elif isinstance(value, int):
             lines.append(f"{key} = {value}")
         elif isinstance(value, str):
-            lines.append(f'{key} = "{value}"')
+            lines.append(f"{key} = {json.dumps(value)}")
         else:
-            lines.append(f"{key} = {value!r}")
+            raise TypeError(f"Unsupported state value for {key}: {type(value).__name__}")
 
     with open(state_path, "w") as f:
         f.write("\n".join(lines) + "\n")

@@ -6,8 +6,9 @@ import asyncio
 import contextlib
 import logging
 import time
+from collections.abc import Awaitable
 
-from mloop.config import Config, load_config
+from mloop.config import Config, load_config, load_state, save_state
 from mloop.display.drm import discover_connectors
 from mloop.display.hdmi_watcher import HdmiEvent, HdmiWatcher
 from mloop.gestures.state_machine import GestureStateMachine
@@ -46,20 +47,14 @@ class Daemon:
         self.logger = setup_logging()
         self.service = ServiceManager()
         self.player = create_player(self.config.player, self.config.playback)
-        self.state = RuntimeState(
-            volume=self.config.playback.volume,
-            rotation=self.config.display.rotation,
-            audio_output=self.config.audio.output,
-        )
+        self.state = RuntimeState.from_config_and_state(self.config, load_state())
         self.gesture_machine = GestureStateMachine(self.config.hdmi_gestures)
         self.menu_model: MenuModel | None = None
         self.menu_controller: MenuController | None = None
         self._hdmi_watcher: HdmiWatcher | None = None
         self._watcher_task: asyncio.Task[None] | None = None
+        self._background_tasks: set[asyncio.Task[object]] = set()
         self._player_restart_backoff_seconds = 0.0
-        self._current_volume = [self.state.volume]
-        self._current_rotation = [self.state.rotation]
-        self._current_audio_idx = [0]
 
     async def run(self) -> None:
         """Run the daemon."""
@@ -152,7 +147,38 @@ class Daemon:
                 with contextlib.suppress(asyncio.CancelledError):
                     await self._watcher_task
 
+        await self._stop_background_tasks()
         self.player.stop()
+
+    def _spawn_background(self, awaitable: Awaitable[object], name: str) -> None:
+        task = asyncio.create_task(self._run_background(awaitable), name=name)
+        self._background_tasks.add(task)
+        task.add_done_callback(self._on_background_task_done)
+
+    async def _run_background(self, awaitable: Awaitable[object]) -> object:
+        return await awaitable
+
+    def _on_background_task_done(self, task: asyncio.Task[object]) -> None:
+        self._background_tasks.discard(task)
+        try:
+            task.result()
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            self.logger.exception("Background task failed: %s", task.get_name())
+
+    async def _stop_background_tasks(self) -> None:
+        if not self._background_tasks:
+            return
+
+        tasks = tuple(self._background_tasks)
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        self._background_tasks.clear()
+
+    def _save_runtime_state(self) -> None:
+        save_state(self.state.to_dict())
 
     def _setup_gesture_handlers(self) -> None:
         """Setup gesture and menu handlers."""
@@ -167,34 +193,52 @@ class Daemon:
             MenuItem(label="Resume playback", action=create_resume_action()),
             MenuItem(
                 label="Volume",
-                action=create_volume_action(self.player, self._current_volume),
+                action=create_volume_action(
+                    self.player,
+                    self.state,
+                    self._spawn_background,
+                    self._save_runtime_state,
+                ),
             ),
             MenuItem(
                 label="Audio output",
                 action=create_audio_output_action(
-                    self.player, ["auto", "hdmi"], self._current_audio_idx
+                    self.player,
+                    ["auto", "hdmi", "system-default"],
+                    self.state,
+                    self._spawn_background,
+                    self._save_runtime_state,
                 ),
             ),
             MenuItem(
                 label="Rotate video",
-                action=create_rotation_action(self.player, self._current_rotation),
+                action=create_rotation_action(
+                    self.player,
+                    self.state,
+                    self._spawn_background,
+                    self._save_runtime_state,
+                ),
             ),
             MenuItem(
                 label="Rescan media",
-                action=create_rescan_action(self._load_media),
+                action=create_rescan_action(self._load_media, self._spawn_background),
             ),
             MenuItem(
                 label="Show network info",
-                action=create_network_info_action(self.player, self.config.menu.osd_duration_ms),
+                action=create_network_info_action(
+                    self.player,
+                    self.config.menu.osd_duration_ms,
+                    self._spawn_background,
+                ),
             ),
             MenuItem(
                 label="Reboot",
-                action=create_reboot_action(),
+                action=create_reboot_action(self._spawn_background),
                 is_dangerous=True,
             ),
             MenuItem(
                 label="Shutdown",
-                action=create_shutdown_action(),
+                action=create_shutdown_action(self._spawn_background),
                 is_dangerous=True,
             ),
         ]
@@ -230,6 +274,7 @@ class Daemon:
 
         menu_model = self.menu_model
         if menu_model is not None and menu_model.is_open:
-            asyncio.create_task(
-                self.player.show_osd(menu_model.render(), self.config.menu.osd_duration_ms)
+            self._spawn_background(
+                self.player.show_osd(menu_model.render(), self.config.menu.osd_duration_ms),
+                "show-menu-osd",
             )
