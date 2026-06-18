@@ -8,6 +8,7 @@ import pytest
 
 from mloop.config import PlaybackConfig, PlayerConfig
 from mloop.player.cvlc import CvlcPlayer
+from mloop.player.ipc import JsonObject
 from mloop.player.mpv import MpvPlayer
 
 
@@ -89,6 +90,29 @@ def test_mpv_start_uses_loop_and_image_duration(monkeypatch: pytest.MonkeyPatch)
 
     assert "--loop-playlist=no" in captured_args
     assert "--image-display-duration=17" in captured_args
+
+
+@pytest.mark.asyncio
+async def test_mpv_load_playlist_uses_loadlist(tmp_path: Path) -> None:
+    player = MpvPlayer(PlayerConfig(ipc_socket=str(tmp_path / "mpv.sock")))
+    commands: list[tuple[str, str, str]] = []
+
+    class _FakeIpc:
+        async def command(self, command: str, path: str, mode: str) -> JsonObject:
+            commands.append((command, path, mode))
+            return {}
+
+    async def connect_ipc() -> _FakeIpc:
+        return _FakeIpc()
+
+    player.connect_ipc = connect_ipc
+    files = [tmp_path / "a.mp4", tmp_path / "b.mp4"]
+
+    await player.load_playlist(files)
+
+    playlist_path = tmp_path / "mpv.m3u"
+    assert commands == [("loadlist", str(playlist_path), "replace")]
+    assert playlist_path.read_text() == f"{files[0]}\n{files[1]}\n"
 
 
 def test_cvlc_start_omits_loop_when_disabled(monkeypatch: pytest.MonkeyPatch) -> None:

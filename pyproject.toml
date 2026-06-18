@@ -42,6 +42,9 @@ mloopd = "mloop.__main__:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+mloop = ["py.typed"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
@@ -55,3 +58,4 @@ warn_return_any = true
 warn_unused_ignores = true
 no_implicit_optional = true
 check_untyped_defs = true
+disallow_any_explicit = true

@@ -35,14 +35,8 @@ fi
 
 echo ""
 echo "Creating directories..."
-mkdir -p /etc/mloop
-mkdir -p /var/lib/mloop
-mkdir -p /run/mloop
-mkdir -p /home/mloop/media
-mkdir -p /opt/mloop/src
-
-chown mloop:mloop /var/lib/mloop
-chown mloop:mloop /home/mloop/media
+install -d /etc/mloop /run/mloop /opt/mloop/src
+install -o mloop -g mloop -d /var/lib/mloop /home/mloop/media
 
 echo ""
 echo "Installing MLOOP..."
@@ -61,12 +55,12 @@ chown -R mloop:mloop /opt/mloop
 echo ""
 echo "Installing configuration..."
 if [ ! -f /etc/mloop/config.toml ]; then
-    cp config/mloop.example.toml /etc/mloop/config.toml
+    cp "$PROJECT_ROOT/config/mloop.example.toml" /etc/mloop/config.toml
 fi
 
 echo ""
 echo "Installing systemd service..."
-cp packaging/systemd/mloop.service /etc/systemd/system/
+cp "$PROJECT_ROOT/packaging/systemd/mloop.service" /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable mloop
 

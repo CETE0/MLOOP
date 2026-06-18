@@ -121,11 +121,9 @@ class MpvPlayer(PlayerBackend):
             files: List of media files.
         """
         ipc = await self.connect_ipc()
-        await ipc.playlist_clear()
-
-        for i, file_path in enumerate(files):
-            mode = "append" if i > 0 else "replace"
-            await ipc.loadfile(str(file_path), mode)
+        playlist_path = Path(self.config.ipc_socket).with_suffix(".m3u")
+        playlist_path.write_text("\n".join(str(path) for path in files) + "\n")
+        await ipc.command("loadlist", str(playlist_path), "replace")
 
         logger.info("Loaded %d files into playlist", len(files))
 

@@ -1190,7 +1190,7 @@ if not self.player.capabilities.osd and self.config.hdmi_gestures.enabled:
 
 ---
 
-# Phase 7 — Low-level polish and maintainability
+# Phase 7 — Low-level polish and maintainability [COMPLETED]
 
 ## 7.1 IPC future creation and request ID handling [COMPLETED]
 
@@ -1221,7 +1221,7 @@ finally:
 
 ---
 
-## 7.2 Batch or reduce mpv playlist IPC overhead
+## 7.2 Batch or reduce mpv playlist IPC overhead [COMPLETED]
 
 ### Problem
 
@@ -1249,7 +1249,7 @@ Before implementing, verify target mpv version supports `loadlist` as expected.
 
 ---
 
-## 7.3 Improve platform detection
+## 7.3 Improve platform detection [COMPLETED]
 
 ### Problem
 
@@ -1277,7 +1277,7 @@ class PlatformInfo:
 
 ---
 
-## 7.4 Fix installer path assumptions
+## 7.4 Fix installer path assumptions [COMPLETED]
 
 ### Problem
 
@@ -1299,7 +1299,7 @@ install -d /etc/mloop /opt/mloop/src
 
 ---
 
-## 7.5 Type/export polish
+## 7.5 Type/export polish [COMPLETED]
 
 ### Planned snippets
 

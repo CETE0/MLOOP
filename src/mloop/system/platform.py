@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import platform
 from dataclasses import dataclass
+from pathlib import Path
 
 logger = logging.getLogger("mloop.system.platform")
 
@@ -18,11 +19,20 @@ class PlatformInfo:
     release: str
     node: str
     python_version: str
+    device_model: str | None = None
 
     @property
     def is_raspberry_pi(self) -> bool:
         """Check if running on Raspberry Pi."""
-        return "aarch64" in self.machine or "arm" in self.machine
+        return self.device_model is not None and "Raspberry Pi" in self.device_model
+
+
+def _read_pi_model() -> str | None:
+    model_path = Path("/proc/device-tree/model")
+    try:
+        return model_path.read_text(errors="ignore").strip("\x00\n")
+    except OSError:
+        return None
 
 
 def get_platform_info() -> PlatformInfo:
@@ -37,6 +47,7 @@ def get_platform_info() -> PlatformInfo:
         release=platform.release(),
         node=platform.node(),
         python_version=platform.python_version(),
+        device_model=_read_pi_model(),
     )
 
     logger.info(
