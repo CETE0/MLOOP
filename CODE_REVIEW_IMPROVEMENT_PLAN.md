@@ -1336,32 +1336,32 @@ mloop = ["py.typed"]
 
 ---
 
-# Documentation updates to make alongside code changes
+# Documentation updates to make alongside code changes [COMPLETED]
 
-## README.md
+## README.md [COMPLETED]
 
 - State that `mloopd` is the supported command after the entrypoint fix.
 - Clarify which config fields are implemented.
 - If cvlc remains limited, document it as playback-only/no OSD.
 
-## docs/configuration.md
+## docs/configuration.md [COMPLETED]
 
 - Add validation rules.
 - Remove or mark unimplemented fields.
 - Document persistence behavior if implemented.
 - Update default `debounce_ms` if changed.
 
-## docs/media.md
+## docs/media.md [COMPLETED]
 
 - Correct image duration once implemented through mpv.
 - Clarify loop behavior after playlist semantics are fixed.
 
-## docs/hdmi-gestures.md
+## docs/hdmi-gestures.md [COMPLETED]
 
 - Update debounce defaults and recommended timing ranges.
 - Add troubleshooting advice for displays/cables that bounce or do not report hotplug reliably.
 
-## docs/audio.md
+## docs/audio.md [COMPLETED]
 
 - Clarify supported audio outputs and how `audio.output` maps to mpv `audio-device`.
 - If `list_audio_devices()` becomes user-facing, document the menu behavior.
