@@ -52,8 +52,8 @@ class Daemon:
             audio_output=self.config.audio.output,
         )
         self.gesture_machine = GestureStateMachine(self.config.hdmi_gestures)
-        self.menu_model = MenuModel()
-        self.menu_controller = MenuController(self.menu_model, self.config.menu)
+        self.menu_model: MenuModel | None = None
+        self.menu_controller: MenuController | None = None
         self._hdmi_watcher: HdmiWatcher | None = None
         self._watcher_task: asyncio.Task[None] | None = None
         self._player_restart_backoff_seconds = 0.0
@@ -71,8 +71,8 @@ class Daemon:
         self.service.setup_signal_handlers()
         self.service.start()
 
-        self._setup_gesture_handlers()
         self._build_menu()
+        self._setup_gesture_handlers()
 
         connectors = discover_connectors(self.config.display.connector)
         if connectors:
@@ -156,6 +156,9 @@ class Daemon:
 
     def _setup_gesture_handlers(self) -> None:
         """Setup gesture and menu handlers."""
+        if self.menu_controller is None:
+            raise RuntimeError("Menu must be built before registering handlers")
+        self.gesture_machine.clear_intent_callbacks()
         self.gesture_machine.on_intent(self.menu_controller.handle_intent)
 
     def _build_menu(self) -> None:
@@ -198,7 +201,6 @@ class Daemon:
 
         self.menu_model = MenuModel(items)
         self.menu_controller = MenuController(self.menu_model, self.config.menu)
-        self.gesture_machine.on_intent(self.menu_controller.handle_intent)
 
     async def _load_media(self) -> None:
         """Scan and load media files."""
@@ -226,7 +228,8 @@ class Daemon:
         """
         self.gesture_machine.handle_event(event)
 
-        if self.menu_model.is_open:
+        menu_model = self.menu_model
+        if menu_model is not None and menu_model.is_open:
             asyncio.create_task(
-                self.player.show_osd(self.menu_model.render(), self.config.menu.osd_duration_ms)
+                self.player.show_osd(menu_model.render(), self.config.menu.osd_duration_ms)
             )

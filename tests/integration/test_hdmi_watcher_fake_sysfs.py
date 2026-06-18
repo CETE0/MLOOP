@@ -103,3 +103,40 @@ async def test_hdmi_watcher_emits_events(tmp_path: Path) -> None:
 
     assert len(events) >= 1
     assert events[0].state == "disconnected"
+
+
+@pytest.mark.asyncio
+async def test_quick_cycle_after_menu_open_emits_both_edges(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    connector_path = tmp_path / "card1-HDMI-A-1"
+    connector_path.mkdir(parents=True)
+    status_file = connector_path / "status"
+    status_file.write_text("connected\n")
+    connector = DrmConnector(
+        name="card1-HDMI-A-1",
+        sysfs_path=connector_path,
+        status="connected",
+    )
+    watcher = HdmiWatcher([connector], debounce_ms=100, poll_interval_ms=50)
+    events: list[HdmiEvent] = []
+    now_ms = 0
+
+    def current_time_ms() -> int:
+        return now_ms
+
+    watcher.on_event(events.append)
+    watcher._last_state[connector.name] = "connected"
+    watcher._last_change_ms[connector.name] = 0
+    monkeypatch.setattr(watcher, "_now_ms", current_time_ms)
+
+    status_file.write_text("disconnected\n")
+    now_ms = 100
+    await watcher._poll()
+
+    status_file.write_text("connected\n")
+    now_ms = 450
+    await watcher._poll()
+
+    assert [event.state for event in events] == ["disconnected", "connected"]

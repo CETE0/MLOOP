@@ -17,7 +17,7 @@ def config() -> HdmiGesturesConfig:
         enter_max_disconnect_ms=8000,
         cycle_min_disconnect_ms=300,
         cycle_max_disconnect_ms=5000,
-        debounce_ms=500,
+        debounce_ms=100,
         select_after_connected_ms=5000,
         menu_timeout_ms=30000,
     )
@@ -102,6 +102,23 @@ def test_menu_navigation(machine: GestureStateMachine) -> None:
 
     machine.handle_event(create_event("disconnected", 4000))
     machine.handle_event(create_event("connected", 4500))
+
+    assert GestureIntent.NEXT_ITEM in intents
+
+
+def test_300ms_cycle_in_menu_open_yields_next_item() -> None:
+    """Test lower-bound menu navigation timing."""
+    config = HdmiGesturesConfig(cycle_min_disconnect_ms=300)
+    machine = GestureStateMachine(config)
+    intents: list[GestureIntent] = []
+    machine.on_intent(intents.append)
+
+    machine.handle_event(create_event("disconnected", 1000))
+    machine.handle_event(create_event("connected", 2000))
+    assert GestureIntent.ENTER_MENU in intents
+
+    machine.handle_event(create_event("disconnected", 3000))
+    machine.handle_event(create_event("connected", 3300))
 
     assert GestureIntent.NEXT_ITEM in intents
 

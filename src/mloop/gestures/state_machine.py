@@ -47,6 +47,10 @@ class GestureStateMachine:
         """
         self._callbacks.append(callback)
 
+    def clear_intent_callbacks(self) -> None:
+        """Clear registered intent callbacks."""
+        self._callbacks.clear()
+
     def handle_event(self, event: HdmiEvent) -> None:
         """Process an HDMI event.
 

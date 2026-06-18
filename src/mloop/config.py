@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import dataclasses
 import tomllib
+from collections.abc import Mapping
 from dataclasses import dataclass, field, fields, is_dataclass
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import TypeVar, cast
 
 DEFAULT_CONFIG_PATH = Path("/etc/mloop/config.toml")
 DEFAULT_STATE_PATH = Path("/var/lib/mloop/state.toml")
@@ -77,7 +78,7 @@ class HdmiGesturesConfig:
     enter_max_disconnect_ms: int = 8000
     cycle_min_disconnect_ms: int = 300
     cycle_max_disconnect_ms: int = 5000
-    debounce_ms: int = 500
+    debounce_ms: int = 100
     select_after_connected_ms: int = 5000
     menu_timeout_ms: int = 30000
 
@@ -112,12 +113,16 @@ class Config:
     web: WebConfig = field(default_factory=WebConfig)
 
 
-def _parse_section(data: dict[str, Any], cls: type[T]) -> T:
+class ConfigError(ValueError):
+    """Invalid MLOOP configuration."""
+
+
+def _parse_section(data: Mapping[str, object], cls: type[T]) -> T:
     """Parse a configuration section from TOML data."""
     if not is_dataclass(cls):
         raise TypeError(f"{cls!r} is not a dataclass")
 
-    defaults_dict: dict[str, Any] = {}
+    defaults_dict: dict[str, object] = {}
     for f in fields(cls):
         if f.default_factory is not dataclasses.MISSING:
             defaults_dict[f.name] = f.default_factory()
@@ -125,6 +130,77 @@ def _parse_section(data: dict[str, Any], cls: type[T]) -> T:
             defaults_dict[f.name] = f.default
     merged = {**defaults_dict, **{k: v for k, v in data.items() if k in defaults_dict}}
     return cls(**merged)
+
+
+def _get_section(data: Mapping[str, object], name: str) -> Mapping[str, object]:
+    value = data.get(name, {})
+    if isinstance(value, dict):
+        return cast(Mapping[str, object], value)
+    raise ConfigError(f"{name} must be a table")
+
+
+def _validate_int_range(name: str, value: object, min_value: int, max_value: int) -> int:
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise ConfigError(f"{name} must be an integer")
+    if not min_value <= value <= max_value:
+        raise ConfigError(f"{name} must be between {min_value} and {max_value}")
+    return value
+
+
+def _validate_positive_int(name: str, value: object) -> int:
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise ConfigError(f"{name} must be an integer")
+    if value <= 0:
+        raise ConfigError(f"{name} must be greater than 0")
+    return value
+
+
+def _validate_choice(name: str, value: object, choices: set[str]) -> str:
+    if not isinstance(value, str):
+        raise ConfigError(f"{name} must be a string")
+    if value not in choices:
+        options = ", ".join(sorted(choices))
+        raise ConfigError(f"{name} must be one of {options}")
+    return value
+
+
+def validate_config(config: Config) -> None:
+    """Validate configuration values."""
+    _validate_choice("player.backend", config.player.backend, {"mpv", "cvlc"})
+    _validate_int_range("playback.volume", config.playback.volume, 0, 100)
+    _validate_positive_int(
+        "playback.image_duration_seconds", config.playback.image_duration_seconds
+    )
+    _validate_int_range("display.rotation", config.display.rotation, 0, 270)
+    if config.display.rotation not in {0, 90, 180, 270}:
+        raise ConfigError("display.rotation must be one of 0, 90, 180, 270")
+    _validate_choice("audio.output", config.audio.output, {"auto", "hdmi", "system-default"})
+
+    gestures = config.hdmi_gestures
+    _validate_positive_int(
+        "hdmi_gestures.enter_min_disconnect_ms", gestures.enter_min_disconnect_ms
+    )
+    _validate_positive_int(
+        "hdmi_gestures.enter_max_disconnect_ms", gestures.enter_max_disconnect_ms
+    )
+    _validate_positive_int(
+        "hdmi_gestures.cycle_min_disconnect_ms", gestures.cycle_min_disconnect_ms
+    )
+    _validate_positive_int(
+        "hdmi_gestures.cycle_max_disconnect_ms", gestures.cycle_max_disconnect_ms
+    )
+    _validate_positive_int("hdmi_gestures.debounce_ms", gestures.debounce_ms)
+    _validate_positive_int(
+        "hdmi_gestures.select_after_connected_ms", gestures.select_after_connected_ms
+    )
+    _validate_positive_int("hdmi_gestures.menu_timeout_ms", gestures.menu_timeout_ms)
+
+    if gestures.debounce_ms >= gestures.cycle_min_disconnect_ms:
+        raise ConfigError("hdmi_gestures.debounce_ms must be less than cycle_min_disconnect_ms")
+    if gestures.cycle_min_disconnect_ms > gestures.cycle_max_disconnect_ms:
+        raise ConfigError("cycle_min_disconnect_ms must be <= cycle_max_disconnect_ms")
+    if gestures.enter_min_disconnect_ms > gestures.enter_max_disconnect_ms:
+        raise ConfigError("enter_min_disconnect_ms must be <= enter_max_disconnect_ms")
 
 
 def load_config(path: Path | None = None) -> Config:
@@ -138,20 +214,20 @@ def load_config(path: Path | None = None) -> Config:
     """
     config_path = path or DEFAULT_CONFIG_PATH
 
-    data: dict[str, Any] = {}
+    data: Mapping[str, object] = {}
     if config_path.exists():
         with open(config_path, "rb") as f:
-            data = tomllib.load(f)
+            data = cast(Mapping[str, object], tomllib.load(f))
 
-    playback = _parse_section(data.get("playback", {}), PlaybackConfig)
-    player = _parse_section(data.get("player", {}), PlayerConfig)
-    display = _parse_section(data.get("display", {}), DisplayConfig)
-    audio = _parse_section(data.get("audio", {}), AudioConfig)
-    hdmi_gestures = _parse_section(data.get("hdmi_gestures", {}), HdmiGesturesConfig)
-    menu = _parse_section(data.get("menu", {}), MenuConfig)
-    web = _parse_section(data.get("web", {}), WebConfig)
+    playback = _parse_section(_get_section(data, "playback"), PlaybackConfig)
+    player = _parse_section(_get_section(data, "player"), PlayerConfig)
+    display = _parse_section(_get_section(data, "display"), DisplayConfig)
+    audio = _parse_section(_get_section(data, "audio"), AudioConfig)
+    hdmi_gestures = _parse_section(_get_section(data, "hdmi_gestures"), HdmiGesturesConfig)
+    menu = _parse_section(_get_section(data, "menu"), MenuConfig)
+    web = _parse_section(_get_section(data, "web"), WebConfig)
 
-    return Config(
+    config = Config(
         playback=playback,
         player=player,
         display=display,
@@ -160,9 +236,11 @@ def load_config(path: Path | None = None) -> Config:
         menu=menu,
         web=web,
     )
+    validate_config(config)
+    return config
 
 
-def load_state(path: Path | None = None) -> dict[str, Any]:
+def load_state(path: Path | None = None) -> dict[str, object]:
     """Load runtime state from TOML file.
 
     Args:
@@ -174,11 +252,11 @@ def load_state(path: Path | None = None) -> dict[str, Any]:
     state_path = path or DEFAULT_STATE_PATH
     if state_path.exists():
         with open(state_path, "rb") as f:
-            return tomllib.load(f)
+            return cast(dict[str, object], tomllib.load(f))
     return {}
 
 
-def save_state(state: dict[str, Any], path: Path | None = None) -> None:
+def save_state(state: dict[str, object], path: Path | None = None) -> None:
     """Save runtime state to TOML file.
 
     Args:

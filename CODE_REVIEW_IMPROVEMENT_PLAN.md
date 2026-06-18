@@ -425,9 +425,9 @@ Alternative: set mpv properties after IPC connect where possible, but
 
 ---
 
-# Phase 3 — Menu and HDMI gesture correctness
+# Phase 3 — Menu and HDMI gesture correctness [COMPLETED]
 
-## 3.1 Register only one menu controller
+## 3.1 Register only one menu controller [COMPLETED]
 
 ### Problem
 
@@ -478,7 +478,7 @@ def test_daemon_registers_one_menu_controller() -> None:
 
 ---
 
-## 3.2 Fix debounce vs gesture timing
+## 3.2 Fix debounce vs gesture timing [COMPLETED]
 
 ### Problem
 
@@ -597,7 +597,7 @@ def test_300ms_cycle_in_menu_open_yields_next_item() -> None:
 
 ---
 
-## 3.3 Reduce menu-open source-of-truth drift
+## 3.3 Reduce menu-open source-of-truth drift [COMPLETED]
 
 ### Problem
 
