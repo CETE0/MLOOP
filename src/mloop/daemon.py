@@ -7,6 +7,7 @@ import contextlib
 import logging
 import time
 from collections.abc import Awaitable
+from pathlib import Path
 
 from mloop.config import Config, load_config, load_state, save_state
 from mloop.display.drm import discover_connectors
@@ -37,17 +38,18 @@ logger = logging.getLogger("mloop.daemon")
 class Daemon:
     """MLOOP main daemon."""
 
-    def __init__(self, config: Config | None = None) -> None:
+    def __init__(self, config: Config | None = None, state_path: Path | None = None) -> None:
         """Initialize the daemon.
 
         Args:
             config: Configuration object. Loads from default path if not provided.
         """
         self.config = config or load_config()
+        self._state_path = state_path
         self.logger = setup_logging()
         self.service = ServiceManager()
         self.player = create_player(self.config.player, self.config.playback)
-        self.state = RuntimeState.from_config_and_state(self.config, load_state())
+        self.state = RuntimeState.from_config_and_state(self.config, load_state(self._state_path))
         self.gesture_machine = GestureStateMachine(self.config.hdmi_gestures)
         self.menu_model: MenuModel | None = None
         self.menu_controller: MenuController | None = None
@@ -178,7 +180,7 @@ class Daemon:
         self._background_tasks.clear()
 
     def _save_runtime_state(self) -> None:
-        save_state(self.state.to_dict())
+        save_state(self.state.to_dict(), self._state_path)
 
     def _setup_gesture_handlers(self) -> None:
         """Setup gesture and menu handlers."""

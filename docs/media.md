@@ -45,8 +45,8 @@ Multiple directories are supported. All directories are scanned and combined int
 
 - Files are sorted alphabetically by default
 - Set `shuffle = true` to randomize playback order
-- Set `loop = true` to repeat the playlist indefinitely
-- Images are displayed for `image_duration_seconds` (default: 10 seconds)
+- Set `loop = true` to make the player backend repeat the playlist indefinitely
+- Images are displayed for `image_duration_seconds` with the mpv backend (default: 10 seconds)
 
 ## No Media State
 

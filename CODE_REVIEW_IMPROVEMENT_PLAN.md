@@ -827,9 +827,9 @@ def create_reboot_action(spawn: SpawnFunc) -> Callable[[], None]:
 
 ---
 
-# Phase 5 — Config, state, and documented behavior
+# Phase 5 — Config, state, and documented behavior [COMPLETED]
 
-## 5.1 Add config validation
+## 5.1 Add config validation [COMPLETED]
 
 ### Problem
 
@@ -1065,7 +1065,7 @@ def test_build_playlist_does_not_duplicate_for_loop(tmp_path):
 
 ---
 
-## 5.5 Clarify or implement display mode and web config
+## 5.5 Clarify or implement display mode and web config [COMPLETED]
 
 ### Display mode options
 

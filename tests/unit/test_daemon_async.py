@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from pathlib import Path
 
 import pytest
 
@@ -10,8 +11,11 @@ from mloop.daemon import Daemon
 
 
 @pytest.mark.asyncio
-async def test_background_task_exception_is_logged(caplog: pytest.LogCaptureFixture) -> None:
-    daemon = Daemon(Config())
+async def test_background_task_exception_is_logged(
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    daemon = Daemon(Config(), state_path=tmp_path / "state.toml")
 
     async def fail() -> None:
         raise RuntimeError("boom")

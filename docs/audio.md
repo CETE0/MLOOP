@@ -10,6 +10,9 @@ MLOOP supports multiple audio output options through mpv and ALSA/PipeWire.
 | `hdmi` | HDMI audio output |
 | `system-default` | System default audio output |
 
+With the mpv backend, these map to mpv's `audio-device` property. `auto` and `system-default`
+use mpv automatic selection, while `hdmi` maps to the configured HDMI ALSA output alias.
+
 ## Configuration
 
 Set the audio output in `/etc/mloop/config.toml`:
@@ -28,6 +31,8 @@ Use the HDMI gesture menu to change audio output:
 3. Stay connected for 5 seconds to select
 4. Navigate through available options
 5. Stay connected to confirm
+
+The selected audio output is saved in `/var/lib/mloop/state.toml` and reused after restart.
 
 ## Troubleshooting
 

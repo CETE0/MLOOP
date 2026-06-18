@@ -57,7 +57,7 @@ async def test_player_crash_reloads_media_and_state(tmp_path: Path) -> None:
     config.playback.volume = 70
     config.display.rotation = 90
     config.audio.output = "hdmi"
-    daemon = Daemon(config)
+    daemon = Daemon(config, state_path=tmp_path / "state.toml")
     calls: list[str] = []
     daemon.player = _FakePlayer(calls)
 
@@ -78,7 +78,7 @@ async def test_player_crash_reloads_media_and_state(tmp_path: Path) -> None:
 async def test_player_recovery_increases_backoff_on_failure(tmp_path: Path) -> None:
     config = Config()
     config.playback.media_dirs = [str(tmp_path)]
-    daemon = Daemon(config)
+    daemon = Daemon(config, state_path=tmp_path / "state.toml")
     calls: list[str] = []
     player = _FakePlayer(calls)
 

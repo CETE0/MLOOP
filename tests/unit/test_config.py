@@ -15,6 +15,8 @@ from mloop.config import (
     PlayerConfig,
     WebConfig,
     load_config,
+    load_state,
+    save_state,
 )
 
 
@@ -153,3 +155,37 @@ def test_invalid_gesture_debounce_rejected(tmp_path: Path) -> None:
 
     with pytest.raises(ConfigError, match="debounce_ms"):
         load_config(path)
+
+
+def test_display_mode_runtime_setting_rejected(tmp_path: Path) -> None:
+    path = tmp_path / "config.toml"
+    path.write_text('[display]\nmode = "1920x1080@60"\n')
+
+    with pytest.raises(ConfigError, match="display.mode"):
+        load_config(path)
+
+
+def test_web_enabled_rejected_until_implemented(tmp_path: Path) -> None:
+    path = tmp_path / "config.toml"
+    path.write_text("[web]\nenabled = true\n")
+
+    with pytest.raises(ConfigError, match="web.enabled"):
+        load_config(path)
+
+
+def test_state_save_load_roundtrip(tmp_path: Path) -> None:
+    path = tmp_path / "state.toml"
+    save_state(
+        {
+            "volume": 90,
+            "rotation": 270,
+            "audio_output": "system-default",
+        },
+        path,
+    )
+
+    assert load_state(path) == {
+        "volume": 90,
+        "rotation": 270,
+        "audio_output": "system-default",
+    }

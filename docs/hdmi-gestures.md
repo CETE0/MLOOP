@@ -38,10 +38,14 @@ enter_min_disconnect_ms = 800
 enter_max_disconnect_ms = 8000
 cycle_min_disconnect_ms = 300
 cycle_max_disconnect_ms = 5000
-debounce_ms = 500
+debounce_ms = 100
 select_after_connected_ms = 5000
 menu_timeout_ms = 30000
 ```
+
+`debounce_ms` must be lower than `cycle_min_disconnect_ms`. If a display or cable produces noisy
+hotplug transitions, increase debounce carefully while keeping enough room for 300 ms navigation
+gestures.
 
 ## Compatibility
 
@@ -76,3 +80,4 @@ See [Display Configuration](display.md) for more information.
 ### Gestures are too sensitive or not sensitive enough
 
 Adjust the timing values in `[hdmi_gestures]` section of the configuration file.
+Keep `debounce_ms` below `cycle_min_disconnect_ms`; the default is 100 ms.

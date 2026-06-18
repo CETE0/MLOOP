@@ -165,19 +165,52 @@ def _validate_choice(name: str, value: object, choices: set[str]) -> str:
     return value
 
 
+def _validate_string(name: str, value: object) -> str:
+    if not isinstance(value, str):
+        raise ConfigError(f"{name} must be a string")
+    if not value:
+        raise ConfigError(f"{name} must not be empty")
+    return value
+
+
+def _validate_bool(name: str, value: object) -> bool:
+    if not isinstance(value, bool):
+        raise ConfigError(f"{name} must be true or false")
+    return value
+
+
+def _validate_string_list(name: str, value: object) -> list[str]:
+    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+        raise ConfigError(f"{name} must be a list of strings")
+    if not value:
+        raise ConfigError(f"{name} must not be empty")
+    return value
+
+
 def validate_config(config: Config) -> None:
     """Validate configuration values."""
+    _validate_string_list("playback.media_dirs", config.playback.media_dirs)
+    _validate_bool("playback.shuffle", config.playback.shuffle)
+    _validate_bool("playback.loop", config.playback.loop)
     _validate_choice("player.backend", config.player.backend, {"mpv", "cvlc"})
+    _validate_string("player.mpv_path", config.player.mpv_path)
+    _validate_string("player.cvlc_path", config.player.cvlc_path)
+    _validate_string("player.ipc_socket", config.player.ipc_socket)
     _validate_int_range("playback.volume", config.playback.volume, 0, 100)
     _validate_positive_int(
         "playback.image_duration_seconds", config.playback.image_duration_seconds
     )
+    _validate_string("display.connector", config.display.connector)
+    _validate_string("display.mode", config.display.mode)
+    if config.display.mode != "auto":
+        raise ConfigError("display.mode runtime mode setting is not implemented")
     _validate_int_range("display.rotation", config.display.rotation, 0, 270)
     if config.display.rotation not in {0, 90, 180, 270}:
         raise ConfigError("display.rotation must be one of 0, 90, 180, 270")
     _validate_choice("audio.output", config.audio.output, {"auto", "hdmi", "system-default"})
 
     gestures = config.hdmi_gestures
+    _validate_bool("hdmi_gestures.enabled", gestures.enabled)
     _validate_positive_int(
         "hdmi_gestures.enter_min_disconnect_ms", gestures.enter_min_disconnect_ms
     )
@@ -202,6 +235,15 @@ def validate_config(config: Config) -> None:
         raise ConfigError("cycle_min_disconnect_ms must be <= cycle_max_disconnect_ms")
     if gestures.enter_min_disconnect_ms > gestures.enter_max_disconnect_ms:
         raise ConfigError("enter_min_disconnect_ms must be <= enter_max_disconnect_ms")
+
+    _validate_positive_int("menu.osd_duration_ms", config.menu.osd_duration_ms)
+    _validate_bool("menu.confirm_dangerous_actions", config.menu.confirm_dangerous_actions)
+
+    _validate_bool("web.enabled", config.web.enabled)
+    _validate_string("web.host", config.web.host)
+    _validate_int_range("web.port", config.web.port, 1, 65535)
+    if config.web.enabled:
+        raise ConfigError("web.enabled is not implemented")
 
 
 def load_config(path: Path | None = None) -> Config:

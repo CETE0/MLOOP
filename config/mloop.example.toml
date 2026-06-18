@@ -25,7 +25,7 @@ enter_min_disconnect_ms = 800
 enter_max_disconnect_ms = 8000
 cycle_min_disconnect_ms = 300
 cycle_max_disconnect_ms = 5000
-debounce_ms = 500
+debounce_ms = 100
 select_after_connected_ms = 5000
 menu_timeout_ms = 30000
 

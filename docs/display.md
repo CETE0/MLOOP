@@ -38,12 +38,8 @@ Change rotation via the HDMI gesture menu or configuration file.
 
 ## Display Modes
 
-By default, MLOOP uses the display's preferred mode. You can force a specific mode:
-
-```toml
-[display]
-mode = "1920x1080@60"
-```
+By default, MLOOP uses the display's preferred mode. Runtime mode switching through
+`display.mode` is not implemented; the only accepted value is `auto`.
 
 ## Forced HDMI Output
 
@@ -83,5 +79,5 @@ Place the EDID file in `/lib/firmware/`.
 ### Wrong Resolution
 
 1. Check display EDID: `cat /sys/class/drm/card*-HDMI-A-*/edid`
-2. Force a specific mode in configuration
+2. Force a specific mode with kernel DRM/KMS options
 3. Check display settings

@@ -74,7 +74,7 @@ See [docs/hdmi-gestures.md](docs/hdmi-gestures.md) for full documentation.
 Configuration files:
 
 - `/etc/mloop/config.toml` - User-editable configuration
-- `/var/lib/mloop/state.toml` - Runtime state
+- `/var/lib/mloop/state.toml` - Runtime state saved by menu actions
 - `/run/mloop/mpv.sock` - mpv IPC socket
 
 See [docs/configuration.md](docs/configuration.md) for all options.
@@ -95,7 +95,8 @@ See [docs/configuration.md](docs/configuration.md) for all options.
 
 - HDMI gesture control is experimental and may not work with all displays or configurations
 - Forced HDMI output mode may interfere with hotplug detection
-- mpv playback must be validated against cvlc on target hardware
+- `display.mode` and `web.enabled` are parsed as roadmap fields but not implemented runtime features
+- cvlc support is playback-focused and does not provide the mpv OSD/control surface
 
 ## Contributing
 
